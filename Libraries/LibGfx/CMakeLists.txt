@@ -28,8 +28,7 @@ set(SOURCES
     SystemTheme.cpp
     Triangle.cpp
     WindowTheme.cpp
-    TTFont.cpp
 )
 
 serenity_lib(LibGfx gfx)
-target_link_libraries(LibGfx LibM LibCore)
+target_link_libraries(LibGfx LibTTF LibM LibCore)
