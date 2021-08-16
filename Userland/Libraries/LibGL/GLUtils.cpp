@@ -120,6 +120,11 @@ void glDisableClientState(GLenum cap)
     g_gl_context->gl_disable_client_state(cap);
 }
 
+void glGetIntegerv(GLenum pname, GLint* params)
+{
+    g_gl_context->gl_get_integerv(pname, params);
+}
+
 void glDepthRange(GLdouble min, GLdouble max)
 {
     g_gl_context->gl_depth_range(min, max);
