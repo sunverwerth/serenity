@@ -73,6 +73,7 @@ public:
     virtual void gl_draw_elements(GLenum mode, GLsizei count, GLenum type, const void* indices) = 0;
     virtual void gl_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) = 0;
     virtual void gl_depth_range(GLdouble min, GLdouble max) = 0;
+    virtual void gl_depth_func(GLenum func) = 0;
 
     virtual void present() = 0;
 };

@@ -114,3 +114,9 @@ void glDepthRange(GLdouble min, GLdouble max)
 {
     g_gl_context->gl_depth_range(min, max);
 }
+
+void glDepthFunc(GLenum func)
+{
+    g_gl_context->gl_depth_func(func);
+}
+
