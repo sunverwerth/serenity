@@ -84,6 +84,8 @@ public:
     virtual void gl_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) override;
     virtual void gl_depth_range(GLdouble min, GLdouble max) override;
     virtual void gl_depth_func(GLenum func) override;
+    virtual void gl_get_integerv(GLenum pname, GLint* params) override;
+
     virtual void present() override;
 
 private:

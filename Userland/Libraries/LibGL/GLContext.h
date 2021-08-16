@@ -74,6 +74,7 @@ public:
     virtual void gl_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) = 0;
     virtual void gl_depth_range(GLdouble min, GLdouble max) = 0;
     virtual void gl_depth_func(GLenum func) = 0;
+    virtual void gl_get_integerv(GLenum pname, GLint* params) = 0;
 
     virtual void present() = 0;
 };

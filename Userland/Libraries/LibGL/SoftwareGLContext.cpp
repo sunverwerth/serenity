@@ -1755,6 +1755,23 @@ void SoftwareGLContext::gl_color_mask(GLboolean red, GLboolean green, GLboolean 
     m_rasterizer.set_options(options);
 }
 
+void SoftwareGLContext::gl_get_integerv(GLenum pname, GLint* params)
+{
+    // FIXME: We currently only support a small subset of params. Complete this list eventually
+    RETURN_WITH_ERROR_IF(!(pname == GL_MAX_TEXTURE_SIZE || pname == GL_MAX_TEXTURE_UNITS), GL_INVALID_ENUM);
+
+    switch (pname) {
+    case GL_MAX_TEXTURE_SIZE:
+        *params = Texture2D::MAX_TEXTURE_SIZE;
+        break;
+    case GL_MAX_TEXTURE_UNITS:
+        *params = m_texture_units.size();
+        break;
+    default:
+        break;
+    }
+}
+
 void SoftwareGLContext::present()
 {
     m_rasterizer.blit_to(*m_frontbuffer);
