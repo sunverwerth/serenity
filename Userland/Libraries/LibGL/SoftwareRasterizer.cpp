@@ -406,17 +406,20 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
 
                         auto float_dst = to_vec4(*dst);
 
+                        auto src_alpha = FloatVector4(src->w(), src->w(), src->w(), src->w());
+                        auto dst_alpha = FloatVector4(float_dst.w(), float_dst.w(), float_dst.w(), float_dst.w());
+
                         auto src_factor = src_constant
                             + *src * src_factor_src_color
-                            + FloatVector4(src->w(), src->w(), src->w(), src->w()) * src_factor_src_alpha
+                            + src_alpha * src_factor_src_alpha
                             + float_dst * src_factor_dst_color
-                            + FloatVector4(float_dst.w(), float_dst.w(), float_dst.w(), float_dst.w()) * src_factor_dst_alpha;
+                            + dst_alpha * src_factor_dst_alpha;
 
                         auto dst_factor = dst_constant
                             + *src * dst_factor_src_color
-                            + FloatVector4(src->w(), src->w(), src->w(), src->w()) * dst_factor_src_alpha
+                            + src_alpha * dst_factor_src_alpha
                             + float_dst * dst_factor_dst_color
-                            + FloatVector4(float_dst.w(), float_dst.w(), float_dst.w(), float_dst.w()) * dst_factor_dst_alpha;
+                            + dst_alpha * dst_factor_dst_alpha;
 
                         *dst = (*dst & ~options.color_mask) | (to_rgba32(*src * src_factor + float_dst * dst_factor) & options.color_mask);
                     }

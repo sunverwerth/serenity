@@ -120,6 +120,10 @@ void glDisableClientState(GLenum cap)
     g_gl_context->gl_disable_client_state(cap);
 }
 
+void glTexEnvf(GLenum, GLenum, GLfloat)
+{
+}
+
 void glGetIntegerv(GLenum pname, GLint* params)
 {
     g_gl_context->gl_get_integerv(pname, params);
@@ -133,4 +137,37 @@ void glDepthRange(GLdouble min, GLdouble max)
 void glDepthFunc(GLenum func)
 {
     g_gl_context->gl_depth_func(func);
+}
+
+void glPixelStorei(GLenum, GLint)
+{
+}
+
+void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* pixels)
+{
+    g_gl_context->gl_tex_sub_image_2d(target, level, xoffset, yoffset, width, height, format, type, pixels);
+}
+
+void glDrawBuffer(GLenum)
+{
+}
+
+void glPolygonMode(GLenum, GLenum)
+{
+}
+
+void glPolygonOffset(GLfloat, GLfloat)
+{
+}
+
+void glFogi(GLenum, GLint)
+{
+}
+
+void glFogf(GLenum, GLfloat)
+{
+}
+
+void glFogfv(GLenum, const GLfloat*)
+{
 }

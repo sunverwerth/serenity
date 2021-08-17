@@ -545,6 +545,10 @@ void SoftwareGLContext::gl_enable(GLenum capability)
         rasterizer_options.enable_alpha_test = true;
         update_rasterizer_options = true;
         break;
+    case GL_TEXTURE_2D:
+        rasterizer_options.enable_textures = true;
+        update_rasterizer_options = true;
+        break;
     default:
         RETURN_WITH_ERROR_IF(true, GL_INVALID_ENUM);
     }
@@ -579,6 +583,10 @@ void SoftwareGLContext::gl_disable(GLenum capability)
     case GL_ALPHA_TEST:
         m_alpha_test_enabled = false;
         rasterizer_options.enable_alpha_test = false;
+        update_rasterizer_options = true;
+        break;
+    case GL_TEXTURE_2D:
+        rasterizer_options.enable_textures = false;
         update_rasterizer_options = true;
         break;
     default:
@@ -643,10 +651,28 @@ void SoftwareGLContext::gl_tex_image_2d(GLenum target, GLint level, GLint intern
     RETURN_WITH_ERROR_IF(type != GL_UNSIGNED_BYTE, GL_INVALID_VALUE);
     RETURN_WITH_ERROR_IF(level < 0 || level > Texture2D::LOG2_MAX_TEXTURE_SIZE, GL_INVALID_VALUE);
     RETURN_WITH_ERROR_IF(width < 0 || height < 0 || width > (2 + Texture2D::MAX_TEXTURE_SIZE) || height > (2 + Texture2D::MAX_TEXTURE_SIZE), GL_INVALID_VALUE);
-    RETURN_WITH_ERROR_IF((width & 2) != 0 || (height & 2) != 0, GL_INVALID_VALUE);
+    //RETURN_WITH_ERROR_IF((width & 1) != 0 || (height & 1) != 0, GL_INVALID_VALUE);
     RETURN_WITH_ERROR_IF(border < 0 || border > 1, GL_INVALID_VALUE);
 
     m_active_texture_unit->bound_texture_2d()->upload_texture_data(target, level, internal_format, width, height, border, format, type, data);
+}
+
+void SoftwareGLContext::gl_tex_sub_image_2d(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* pixels)
+{
+    RETURN_WITH_ERROR_IF(m_in_draw_state, GL_INVALID_OPERATION);
+
+    // We only support GL_TEXTURE_2D for now
+    RETURN_WITH_ERROR_IF(target != GL_TEXTURE_2D, GL_INVALID_ENUM);
+
+    // Check if there is actually a texture bound
+    RETURN_WITH_ERROR_IF(target == GL_TEXTURE_2D && m_active_texture_unit->currently_bound_target() != GL_TEXTURE_2D, GL_INVALID_OPERATION);
+
+    // We only support symbolic constants for now
+    RETURN_WITH_ERROR_IF(type != GL_UNSIGNED_BYTE, GL_INVALID_VALUE);
+    RETURN_WITH_ERROR_IF(level < 0 || level > Texture2D::LOG2_MAX_TEXTURE_SIZE, GL_INVALID_VALUE);
+    RETURN_WITH_ERROR_IF(width < 0 || height < 0 || width > (2 + Texture2D::MAX_TEXTURE_SIZE) || height > (2 + Texture2D::MAX_TEXTURE_SIZE), GL_INVALID_VALUE);
+
+    m_active_texture_unit->bound_texture_2d()->replace_sub_texture_data(level, xoffset, yoffset, width, height, format, type, pixels);
 }
 
 void SoftwareGLContext::gl_tex_parameter(GLenum target, GLenum pname, GLfloat param)

@@ -23,6 +23,7 @@ struct RasterizerOptions {
     bool enable_depth_test { false };
     bool enable_depth_write { true };
     bool enable_alpha_test { false };
+    bool enable_textures { true };
     GLenum alpha_test_func { GL_ALWAYS };
     float alpha_test_ref_value { 0 };
     bool enable_blending { false };
