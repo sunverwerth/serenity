@@ -124,11 +124,6 @@ void glTexEnvf(GLenum, GLenum, GLfloat)
 {
 }
 
-void glGetIntegerv(GLenum pname, GLint* params)
-{
-    g_gl_context->gl_get_integerv(pname, params);
-}
-
 void glDepthRange(GLdouble min, GLdouble max)
 {
     g_gl_context->gl_depth_range(min, max);

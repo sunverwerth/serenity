@@ -71,62 +71,16 @@ void Texture2D::upload_texture_data(GLenum, GLint lod, GLint internal_format, GL
     auto& mip = m_mipmaps[lod];
     mip.set_width(width);
     mip.set_height(height);
+    mip.pixel_data().resize(width * height);
 
     // No pixel data was supplied. Just allocate texture memory and leave it uninitialized.
     if (pixels == nullptr) {
-        mip.pixel_data().resize(width * height);
         return;
     }
 
     m_internal_format = internal_format;
 
-    const u8* pixel_byte_array = reinterpret_cast<const u8*>(pixels);
-
-    mip.pixel_data().clear();
-    if (format == GL_RGBA) {
-        for (auto i = 0; i < width * height * 4; i += 4) {
-            u32 r = pixel_byte_array[i + 0];
-            u32 g = pixel_byte_array[i + 1];
-            u32 b = pixel_byte_array[i + 2];
-            u32 a = pixel_byte_array[i + 3];
-
-            u32 pixel = ((a << 24) | (r << 16) | (g << 8) | b);
-            mip.pixel_data().append(pixel);
-        }
-    } else if (format == GL_BGRA) {
-        for (auto i = 0; i < width * height * 4; i += 4) {
-            u32 b = pixel_byte_array[i + 0];
-            u32 g = pixel_byte_array[i + 1];
-            u32 r = pixel_byte_array[i + 2];
-            u32 a = pixel_byte_array[i + 3];
-
-            u32 pixel = ((a << 24) | (r << 16) | (g << 8) | b);
-            mip.pixel_data().append(pixel);
-        }
-    } else if (format == GL_BGR) {
-        for (auto i = 0; i < width * height * 3; i += 3) {
-            u32 b = pixel_byte_array[i + 0];
-            u32 g = pixel_byte_array[i + 1];
-            u32 r = pixel_byte_array[i + 2];
-            u32 a = 255;
-
-            u32 pixel = ((a << 24) | (r << 16) | (g << 8) | b);
-            mip.pixel_data().append(pixel);
-        }
-    } else if (format == GL_RGB) {
-        for (auto i = 0; i < width * height * 3; i += 3) {
-            u32 r = pixel_byte_array[i + 0];
-            u32 g = pixel_byte_array[i + 1];
-            u32 b = pixel_byte_array[i + 2];
-            u32 a = 255;
-
-            u32 pixel = ((a << 24) | (r << 16) | (g << 8) | b);
-            mip.pixel_data().append(pixel);
-        }
-    } else {
-        VERIFY_NOT_REACHED();
-    }
-    blit(pixels, width, height, ptr, 0, 0, width, height, format);
+    blit(pixels, width, height, mip.pixel_data().data(), 0, 0, width, height, format);
 }
 
 void Texture2D::replace_sub_texture_data(GLint lod, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data)
@@ -138,7 +92,7 @@ void Texture2D::replace_sub_texture_data(GLint lod, GLint xoffset, GLint yoffset
         return;
     }
 
-    blit(data, width, height, mip.pixel_data(), xoffset, yoffset, mip.width(), mip.height(), format);
+    blit(data, width, height, mip.pixel_data().data(), xoffset, yoffset, mip.width(), mip.height(), format);
 }
 
 MipMap const& Texture2D::mipmap(unsigned lod) const

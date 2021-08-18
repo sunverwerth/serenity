@@ -38,7 +38,7 @@ public:
     void toggle_rotate_y() { m_rotate_y = !m_rotate_y; }
     void toggle_rotate_z() { m_rotate_z = !m_rotate_z; }
     void set_rotation_speed(float speed) { m_rotation_speed = speed; }
-    void set_stat_label(RefPtr<GUI::Label> l) { m_stats = l; };
+    void set_stat_label(RefPtr<GUI::Label> l) { m_stats = l; m_stats->set_visible(m_show_frame_rate); };
     void set_wrap_s_mode(GLint mode) { m_wrap_s_mode = mode; }
     void set_wrap_t_mode(GLint mode) { m_wrap_t_mode = mode; }
     void set_texture_scale(float scale) { m_texture_scale = scale; }
@@ -97,8 +97,8 @@ private:
     float m_angle_y = 0.0;
     float m_angle_z = 0.0;
     Gfx::IntPoint m_last_mouse;
-    float m_rotation_speed = 60.f;
-    bool m_show_frame_rate = false;
+    float m_rotation_speed = 0.f;
+    bool m_show_frame_rate = true;
     int m_cycles = 0;
     int m_accumulated_time = 0;
     RefPtr<GUI::Label> m_stats;
@@ -106,7 +106,7 @@ private:
     GLint m_wrap_t_mode = GL_REPEAT;
     float m_texture_scale = 1.0f;
     GLint m_mag_filter = GL_NEAREST;
-    float m_zoom = 1;
+    float m_zoom = 5;
 };
 
 void GLContextWidget::paint_event(GUI::PaintEvent& event)
@@ -218,7 +218,7 @@ bool GLContextWidget::load(const String& filename)
     builder.append(".bmp");
 
     // Attempt to open the texture file from disk
-    auto texture_image = Gfx::Bitmap::try_load_from_file(builder.string_view());
+    auto texture_image = Gfx::Bitmap::try_load_from_file("/home/anon/Documents/3D Models/teapot.bmp");
 
     GLuint tex;
     glGenTextures(1, &tex);
@@ -455,7 +455,7 @@ int main(int argc, char** argv)
 
     window->show();
 
-    auto filename = argc > 1 ? argv[1] : "/home/anon/Documents/3D Models/teapot.obj";
+    auto filename = argc > 1 ? argv[1] : "/home/anon/Documents/3D Models/cube.obj";
     load_model(filename);
 
     return app->exec();

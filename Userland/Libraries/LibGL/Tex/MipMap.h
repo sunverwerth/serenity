@@ -15,17 +15,12 @@ namespace GL {
 
 class MipMap {
 public:
-    MipMap() = default;
-    ~MipMap() {
-        delete[] m_pixel_data;
-    }
-
     void set_width(GLsizei width) { m_width = width; }
     void set_height(GLsizei height) { m_height = height; }
     GLsizei width() const { return m_width; }
     GLsizei height() const { return m_height; }
 
-    u32*& pixel_data() { return m_pixel_data; }
+    Vector<u32>& pixel_data() { return m_pixel_data; }
 
     FloatVector4 texel(unsigned x, unsigned y) const
     {
@@ -34,7 +29,7 @@ public:
             lasty = y;
         
             constexpr float div = 1 / 255.f;
-            u32 texel = m_pixel_data[y * m_width + x];
+            u32 texel = m_pixel_data.at(y * m_width + x);
             lastcol = {
                 ((texel >> 16) & 0xff) * div,
                 ((texel >> 8) & 0xff) * div,
@@ -52,6 +47,6 @@ mutable unsigned lasty=-1;
 mutable FloatVector4 lastcol;
     GLsizei m_width { 0 };
     GLsizei m_height { 0 };
-    u32* m_pixel_data { nullptr };
+    Vector<u32> m_pixel_data;
 };
 }

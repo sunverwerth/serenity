@@ -247,6 +247,9 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
                 int z_pass_count = 0;
                 auto coords = b0;
 
+                float depth_scale = (options.depth_max - options.depth_min) * 0.5f;
+                float depth_start = options.depth_min + depth_scale;
+
                 for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++, coords += step_y) {
                     if (pixel_mask[y] == 0) {
                         coords += dbdx * RASTERIZER_BLOCK_SIZE;
@@ -261,7 +264,7 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
                         auto barycentric = FloatVector3(coords.x(), coords.y(), coords.z()) * one_over_area;
                         float z = interpolate(triangle.vertices[0].position.z(), triangle.vertices[1].position.z(), triangle.vertices[2].position.z(), barycentric);
 
-                        z = options.depth_min + (options.depth_max - options.depth_min) * (z + 1) / 2;
+                        z = depth_start + depth_scale * z;
 
                         bool pass = false;
                         switch (options.depth_func) {
@@ -286,7 +289,7 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
                         case GL_LEQUAL:
                             pass = z <= *depth;
                             break;
-                        case GL_LESS:
+                        case GL_LESS: [[likely]]
                             pass = z < *depth;
                             break;
                         }
@@ -421,7 +424,20 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
                             + float_dst * dst_factor_dst_color
                             + dst_alpha * dst_factor_dst_alpha;
 
-                        *dst = (*dst & ~options.color_mask) | (to_rgba32(*src * src_factor + float_dst * dst_factor) & options.color_mask);
+                        *src = *src * src_factor + float_dst * dst_factor;
+                    }
+                }
+            }
+            
+            if (options.color_mask == 0xffffffff) {
+                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++) {
+                    auto src = pixel_buffer[y];
+                    auto dst = &render_target.scanline(y + y0)[x0];
+                    for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, src++, dst++) {
+                        if (~pixel_mask[y] & (1 << x))
+                            continue;
+
+                        *dst = to_rgba32(*src);
                     }
                 }
             } else {
@@ -463,20 +479,14 @@ void SoftwareRasterizer::submit_triangle(const GLTriangle& triangle)
 
 void SoftwareRasterizer::submit_triangle(const GLTriangle& triangle, const Array<TextureUnit, 32>& texture_units)
 {
-    rasterize_triangle(m_options, *m_render_target, *m_depth_buffer, triangle, [&texture_units](const FloatVector2& uv, const FloatVector4& color) -> FloatVector4 {
+    auto* sampler = texture_units[0].is_bound() ? &texture_units[0].bound_texture_2d()->sampler() : nullptr;
+    rasterize_triangle(m_options, *m_render_target, *m_depth_buffer, triangle, [sampler](const FloatVector2& uv, const FloatVector4& color) -> FloatVector4 {
         // TODO: We'd do some kind of multitexturing/blending here
         // Construct a vector for the texel we want to sample
         FloatVector4 texel = color;
 
-        for (const auto& texture_unit : texture_units) {
-
-            // No texture is bound to this texture unit
-            if (!texture_unit.is_bound())
-                continue;
-
-            // FIXME: Don't assume Texture2D, _and_ work out how we blend/do multitexturing properly.....
-            texel = texel * static_ptr_cast<Texture2D>(texture_unit.bound_texture())->sampler().sample(uv);
-        }
+        if (sampler)
+            texel = texel * sampler->sample(uv);
 
         return texel;
     });

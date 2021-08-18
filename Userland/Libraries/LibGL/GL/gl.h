@@ -371,7 +371,6 @@ GLAPI void glDrawArrays(GLenum mode, GLint first, GLsizei count);
 GLAPI void glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices);
 GLAPI void glDepthRange(GLdouble nearVal, GLdouble farVal);
 GLAPI void glDepthFunc(GLenum func);
-GLAPI void glGetIntegerv(GLenum pname, GLint* params);
 GLAPI void glTexEnvf(GLenum target, GLenum pname, GLfloat param);
 GLAPI void glPixelStorei(GLenum pname, GLint param);
 GLAPI void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* pixels);
