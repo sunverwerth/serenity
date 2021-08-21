@@ -87,6 +87,7 @@ public:
     virtual void gl_depth_range(GLdouble min, GLdouble max) override;
     virtual void gl_depth_func(GLenum func) override;
     virtual void gl_polygon_mode(GLenum face, GLenum mode) override;
+    virtual void gl_pixel_store(GLenum pname, GLfloat param) override;
     virtual void present() override;
 
 private:
@@ -251,6 +252,8 @@ private:
     VertexAttribPointer m_client_vertex_pointer;
     VertexAttribPointer m_client_color_pointer;
     VertexAttribPointer m_client_tex_coord_pointer;
+
+    size_t m_unpack_row_length { 0 };
 };
 
 }
