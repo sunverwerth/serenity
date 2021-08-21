@@ -19,5 +19,8 @@ set(SOURCES
     DepthBuffer.cpp
 )
 
+add_compile_options(-O2 -fno-align-functions -fno-align-loops)
+#add_compile_options(-O2 -fno-align-functions)
+
 serenity_lib(LibGL gl)
 target_link_libraries(LibGL LibM LibCore LibGfx)

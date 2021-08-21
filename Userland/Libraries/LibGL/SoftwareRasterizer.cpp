@@ -15,8 +15,8 @@ namespace GL {
 using IntVector2 = Gfx::Vector2<int>;
 using IntVector3 = Gfx::Vector3<int>;
 
-static constexpr int RASTERIZER_BLOCK_SIZE = 16;
-
+static constexpr int RASTERIZER_BLOCK_SIZE = 2;
+Sampler2D* sampler;
 constexpr static int edge_function(const IntVector2& a, const IntVector2& b, const IntVector2& c)
 {
     return ((c.x() - a.x()) * (b.y() - a.y()) - (c.y() - a.y()) * (b.x() - a.x()));
@@ -31,10 +31,10 @@ constexpr static T interpolate(const T& v0, const T& v1, const T& v2, const Floa
 static Gfx::RGBA32 to_rgba32(const FloatVector4& v)
 {
     auto clamped = v.clamped(0, 1);
-    u8 r = clamped.x() * 255;
-    u8 g = clamped.y() * 255;
-    u8 b = clamped.z() * 255;
-    u8 a = clamped.w() * 255;
+    int r = clamped.x() * 255;
+    int g = clamped.y() * 255;
+    int b = clamped.z() * 255;
+    int a = clamped.w() * 255;
     return a << 24 | r << 16 | g << 8 | b;
 }
 
@@ -99,12 +99,14 @@ static constexpr void setup_blend_factors(GLenum mode, FloatVector4& constant, f
 }
 
 template<typename PS>
-static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& render_target, DepthBuffer& depth_buffer, const GLTriangle& triangle, PS pixel_shader)
+static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& render_target, DepthBuffer& depth_buffer, const GLTriangle& _triangle, PS pixel_shader)
 {
     // Since the algorithm is based on blocks of uniform size, we need
     // to ensure that our render_target size is actually a multiple of the block size
     VERIFY((render_target.width() % RASTERIZER_BLOCK_SIZE) == 0);
     VERIFY((render_target.height() % RASTERIZER_BLOCK_SIZE) == 0);
+
+    auto triangle = _triangle;
 
     // Calculate area of the triangle for later tests
     IntVector2 v0 { (int)triangle.vertices[0].position.x(), (int)triangle.vertices[0].position.y() };
@@ -114,6 +116,12 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
     int area = edge_function(v0, v1, v2);
     if (area == 0)
         return;
+
+    if (area < 0) {
+        swap(v0, v1);
+        swap(triangle.vertices[0], triangle.vertices[1]);
+        area = -area;
+    }
 
     float one_over_area = 1.0f / area;
 
@@ -176,6 +184,11 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
             && edges.z() >= zero.z();
     };
 
+    // convert int vector to barycentric weights
+    auto to_barycentric = [one_over_area](const IntVector3& coords) -> FloatVector3 {
+        return FloatVector3(coords.x() * one_over_area, coords.y() * one_over_area, coords.z() * one_over_area);
+    };
+
     // Calculate block-based bounds
     // clang-format off
     const int bx0 = max(0,                      min(min(v0.x(), v1.x()), v2.x())                            ) / RASTERIZER_BLOCK_SIZE;
@@ -183,11 +196,6 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
     const int by0 = max(0,                      min(min(v0.y(), v1.y()), v2.y())                            ) / RASTERIZER_BLOCK_SIZE;
     const int by1 = min(render_target.height(), max(max(v0.y(), v1.y()), v2.y()) + RASTERIZER_BLOCK_SIZE - 1) / RASTERIZER_BLOCK_SIZE;
     // clang-format on
-
-    static_assert(RASTERIZER_BLOCK_SIZE < sizeof(int) * 8, "RASTERIZER_BLOCK_SIZE must be smaller than the pixel_mask's width in bits");
-    int pixel_mask[RASTERIZER_BLOCK_SIZE];
-
-    FloatVector4 pixel_buffer[RASTERIZER_BLOCK_SIZE][RASTERIZER_BLOCK_SIZE];
 
     // Iterate over all blocks within the bounds of the triangle
     for (int by = by0; by < by1; by++) {
@@ -222,121 +230,74 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
             int x0 = bx * RASTERIZER_BLOCK_SIZE;
             int y0 = by * RASTERIZER_BLOCK_SIZE;
 
-            // Generate the coverage mask
-            if (test_point(b0) && test_point(b1) && test_point(b2) && test_point(b3)) {
-                // The block is fully contained within the triangle. Fill the mask with all 1s
-                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++) {
-                    pixel_mask[y] = -1;
-                }
-            } else {
-                // The block overlaps at least one triangle edge.
-                // We need to test coverage of every pixel within the block.
-                auto coords = b0;
-                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++, coords += step_y) {
-                    pixel_mask[y] = 0;
+            bool is_fully_covered = test_point(b0) && test_point(b1) && test_point(b2) && test_point(b3);
 
-                    for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, coords += dbdx) {
-                        if (test_point(coords))
-                            pixel_mask[y] |= 1 << x;
-                    }
-                }
-            }
+            float depth_scale = (options.depth_max - options.depth_min) * 0.5f;
+            float depth_start = options.depth_min + depth_scale;
 
-            // AND the depth mask onto the coverage mask
-            if (options.enable_depth_test) {
-                int z_pass_count = 0;
-                auto coords = b0;
-
-                float depth_scale = (options.depth_max - options.depth_min) * 0.5f;
-                float depth_start = options.depth_min + depth_scale;
-
-                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++, coords += step_y) {
-                    if (pixel_mask[y] == 0) {
-                        coords += dbdx * RASTERIZER_BLOCK_SIZE;
+            auto coords = b0;
+            for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++, coords += step_y) {
+                for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, coords += dbdx) {
+                    if (!is_fully_covered && !test_point(coords))
                         continue;
-                    }
 
-                    auto* depth = &depth_buffer.scanline(y0 + y)[x0];
-                    for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, coords += dbdx, depth++) {
-                        if (~pixel_mask[y] & (1 << x))
+                    auto barycentric = to_barycentric(coords);
+
+                    // DEPTH TEST
+                    if (options.enable_depth_test && options.depth_func != GL_ALWAYS) {
+                        if (options.depth_func == GL_NEVER)
                             continue;
 
-                        auto barycentric = FloatVector3(coords.x(), coords.y(), coords.z()) * one_over_area;
-                        float z = interpolate(triangle.vertices[0].position.z(), triangle.vertices[1].position.z(), triangle.vertices[2].position.z(), barycentric);
+                        float z = depth_start + interpolate(triangle.vertices[0].position.z(), triangle.vertices[1].position.z(), triangle.vertices[2].position.z(), barycentric) * depth_scale;
+                        float* depth = &depth_buffer.scanline(y0 + y)[x0 + x];
 
-                        z = depth_start + depth_scale * z;
-
-                        bool pass = false;
-                        switch (options.depth_func) {
-                        case GL_ALWAYS:
-                            pass = true;
-                            break;
-                        case GL_NEVER:
-                            pass = false;
-                            break;
-                        case GL_GREATER:
-                            pass = z > *depth;
-                            break;
-                        case GL_GEQUAL:
-                            pass = z >= *depth;
-                            break;
-                        case GL_NOTEQUAL:
-                            pass = z != *depth;
-                            break;
-                        case GL_EQUAL:
-                            pass = z == *depth;
-                            break;
-                        case GL_LEQUAL:
-                            pass = z <= *depth;
-                            break;
-                        case GL_LESS: [[likely]]
-                            pass = z < *depth;
-                            break;
-                        }
-
-                        if (!pass) {
-                            pixel_mask[y] ^= 1 << x;
-                            continue;
+                        if (options.depth_func == GL_LEQUAL) {
+                            if (z > *depth)
+                                continue;
+                        } else if (options.depth_func == GL_EQUAL) {
+                            // Force a load from the FPU stack so that we actually compare 32bit floats
+                            if (bit_cast<u32>(z) != bit_cast<u32>(*depth))
+                                continue;
+                        } else {
+                            switch (options.depth_func) {
+                            case GL_GREATER:
+                                if (z <= *depth)
+                                    continue;
+                                break;
+                            case GL_GEQUAL:
+                                if (z < *depth)
+                                    continue;
+                                break;
+                            case GL_NOTEQUAL:
+                                // Force a load from the FPU stack so that we actually compare 32bit floats
+                                if (bit_cast<u32>(z) == bit_cast<u32>(*depth))
+                                    continue;
+                                break;
+                            case GL_LESS:
+                                if (z >= *depth)
+                                    continue;
+                                break;
+                            }
                         }
 
                         if (options.enable_depth_write)
                             *depth = z;
-
-                        z_pass_count++;
                     }
-                }
 
-                // Nice, no pixels passed the depth test -> block rejected by early z
-                if (z_pass_count == 0)
-                    continue;
-            }
-
-            // We will not update the color buffer at all
-            if (!options.color_mask)
-                continue;
-
-            // Draw the pixels according to the previously generated mask
-            auto coords = b0;
-            for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++, coords += step_y) {
-                if (pixel_mask[y] == 0) {
-                    coords += dbdx * RASTERIZER_BLOCK_SIZE;
-                    continue;
-                }
-
-                auto* pixel = pixel_buffer[y];
-                for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, coords += dbdx, pixel++) {
-                    if (~pixel_mask[y] & (1 << x))
+                    // We will not update the color buffer at all
+                    if (!options.color_mask)
                         continue;
 
+                    // SHADING
+                    
                     // Perspective correct barycentric coordinates
-                    auto barycentric = FloatVector3(coords.x(), coords.y(), coords.z()) * one_over_area;
                     float interpolated_reciprocal_w = interpolate(triangle.vertices[0].position.w(), triangle.vertices[1].position.w(), triangle.vertices[2].position.w(), barycentric);
                     float interpolated_w = 1 / interpolated_reciprocal_w;
                     barycentric = barycentric * FloatVector3(triangle.vertices[0].position.w(), triangle.vertices[1].position.w(), triangle.vertices[2].position.w()) * interpolated_w;
 
                     // FIXME: make this more generic. We want to interpolate more than just color and uv
                     FloatVector4 vertex_color;
-                    if (options.shade_smooth) {
+                    if (false && options.shade_smooth) {
                         vertex_color = interpolate(
                             triangle.vertices[0].color,
                             triangle.vertices[1].color,
@@ -352,105 +313,74 @@ static void rasterize_triangle(const RasterizerOptions& options, Gfx::Bitmap& re
                         triangle.vertices[2].tex_coord,
                         barycentric);
 
-                    *pixel = pixel_shader(uv, vertex_color);
-                }
-            }
+                    (void)(pixel_shader);
 
-            if (options.enable_alpha_test && options.alpha_test_func != GL_ALWAYS) {
-                // FIXME: I'm not sure if this is the right place to test this.
-                // If we tested this right at the beginning of our rasterizer routine
-                // we could skip a lot of work but the GL spec might disagree.
-                if (options.alpha_test_func == GL_NEVER)
-                    continue;
+                    FloatVector4 pixel = vertex_color;
+                    if (sampler)
+                        pixel = pixel * sampler->sample(uv);
 
-                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++) {
-                    auto src = pixel_buffer[y];
-                    for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, src++) {
-                        if (~pixel_mask[y] & (1 << x))
+                    // ALPHA TEST
+                    if (options.enable_alpha_test && options.alpha_test_func != GL_ALWAYS) {
+                        if (options.alpha_test_func == GL_NEVER)
                             continue;
-
-                        bool passed = true;
 
                         switch (options.alpha_test_func) {
                         case GL_LESS:
-                            passed = src->w() < options.alpha_test_ref_value;
+                            if (pixel.w() >= options.alpha_test_ref_value)
+                                continue;
                             break;
                         case GL_EQUAL:
-                            passed = src->w() == options.alpha_test_ref_value;
+                            if (pixel.w() != options.alpha_test_ref_value)
+                                continue;
                             break;
                         case GL_LEQUAL:
-                            passed = src->w() <= options.alpha_test_ref_value;
+                            if (pixel.w() > options.alpha_test_ref_value)
+                                continue;
                             break;
                         case GL_GREATER:
-                            passed = src->w() > options.alpha_test_ref_value;
+                            if (pixel.w() <= options.alpha_test_ref_value)
+                                continue;
                             break;
                         case GL_NOTEQUAL:
-                            passed = src->w() != options.alpha_test_ref_value;
+                            if (pixel.w() == options.alpha_test_ref_value)
+                                continue;
                             break;
                         case GL_GEQUAL:
-                            passed = src->w() >= options.alpha_test_ref_value;
+                            if (pixel.w() < options.alpha_test_ref_value)
+                                continue;
                             break;
                         }
-
-                        if (!passed)
-                            pixel_mask[y] ^= (1 << x);
                     }
-                }
-            }
 
-            if (options.enable_blending) {
-                // Blend color values from pixel_buffer into render_target
-                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++) {
-                    auto src = pixel_buffer[y];
-                    auto dst = &render_target.scanline(y + y0)[x0];
-                    for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, src++, dst++) {
-                        if (~pixel_mask[y] & (1 << x))
-                            continue;
+                    auto dst = &render_target.scanline(y + y0)[x + x0];
 
+                    // ALPHA BLENDING
+                    if (options.enable_blending) {
                         auto float_dst = to_vec4(*dst);
 
-                        auto src_alpha = FloatVector4(src->w(), src->w(), src->w(), src->w());
+                        auto src_alpha = FloatVector4(pixel.w(), pixel.w(), pixel.w(), pixel.w());
                         auto dst_alpha = FloatVector4(float_dst.w(), float_dst.w(), float_dst.w(), float_dst.w());
 
                         auto src_factor = src_constant
-                            + *src * src_factor_src_color
+                            + pixel * src_factor_src_color
                             + src_alpha * src_factor_src_alpha
                             + float_dst * src_factor_dst_color
                             + dst_alpha * src_factor_dst_alpha;
 
                         auto dst_factor = dst_constant
-                            + *src * dst_factor_src_color
+                            + pixel * dst_factor_src_color
                             + src_alpha * dst_factor_src_alpha
                             + float_dst * dst_factor_dst_color
                             + dst_alpha * dst_factor_dst_alpha;
 
-                        *src = *src * src_factor + float_dst * dst_factor;
+                        pixel = pixel * src_factor + float_dst * dst_factor;
                     }
-                }
-            }
-            
-            if (options.color_mask == 0xffffffff) {
-                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++) {
-                    auto src = pixel_buffer[y];
-                    auto dst = &render_target.scanline(y + y0)[x0];
-                    for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, src++, dst++) {
-                        if (~pixel_mask[y] & (1 << x))
-                            continue;
 
-                        *dst = to_rgba32(*src);
-                    }
-                }
-            } else {
-                // Copy color values from pixel_buffer into render_target
-                for (int y = 0; y < RASTERIZER_BLOCK_SIZE; y++) {
-                    auto src = pixel_buffer[y];
-                    auto dst = &render_target.scanline(y + y0)[x0];
-                    for (int x = 0; x < RASTERIZER_BLOCK_SIZE; x++, src++, dst++) {
-                        if (~pixel_mask[y] & (1 << x))
-                            continue;
-
-                        *dst = (*dst & ~options.color_mask) | (to_rgba32(*src) & options.color_mask);
-                    }
+                    // WRITE
+                    if (options.color_mask == 0xffffffff)
+                        *dst = to_rgba32(pixel);
+                    else
+                        *dst = (*dst & ~options.color_mask) | (to_rgba32(pixel) & options.color_mask);
                 }
             }
         }
@@ -479,16 +409,9 @@ void SoftwareRasterizer::submit_triangle(const GLTriangle& triangle)
 
 void SoftwareRasterizer::submit_triangle(const GLTriangle& triangle, const Array<TextureUnit, 32>& texture_units)
 {
-    auto* sampler = texture_units[0].is_bound() ? &texture_units[0].bound_texture_2d()->sampler() : nullptr;
-    rasterize_triangle(m_options, *m_render_target, *m_depth_buffer, triangle, [sampler](const FloatVector2& uv, const FloatVector4& color) -> FloatVector4 {
-        // TODO: We'd do some kind of multitexturing/blending here
-        // Construct a vector for the texel we want to sample
-        FloatVector4 texel = color;
-
-        if (sampler)
-            texel = texel * sampler->sample(uv);
-
-        return texel;
+    sampler = texture_units[0].is_bound() ? &texture_units[0].bound_texture_2d()->sampler() : nullptr;
+    rasterize_triangle(m_options, *m_render_target, *m_depth_buffer, triangle, [](const FloatVector2&, const FloatVector4& color) -> FloatVector4 {
+        return color;
     });
 }
 

@@ -72,7 +72,7 @@ private:
         m_init_list = glGenLists(1);
         glNewList(m_init_list, GL_COMPILE);
         {
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
             glClearDepth(1.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }

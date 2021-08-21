@@ -327,6 +327,7 @@ elif [ "$SERENITY_RUN" = "ci" ]; then
         -initrd Kernel/Kernel \
         -append "${SERENITY_KERNEL_CMDLINE}"
 else
+    echo "QEMU = `which $SERENITY_QEMU_BIN`"
     # Meta/run.sh: qemu with user networking
     "$SERENITY_QEMU_BIN" \
         $SERENITY_COMMON_QEMU_ARGS \

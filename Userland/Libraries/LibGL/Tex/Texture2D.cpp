@@ -12,12 +12,25 @@
 
 namespace GL {
 
-static void blit(const void* src, int src_w, int src_h, void* dst, int x_offset, int y_offset, int dst_w, int dst_h, GLenum src_format)
+static void blit(const void* src, int src_w, int src_h, size_t src_row_pixels, void* dst, int x_offset, int y_offset, int dst_w, int dst_h, GLenum src_format)
 {
     (void)(dst_h);
 
     const u8* src_data = reinterpret_cast<const u8*>(src);
+    
     u32* dst_data = reinterpret_cast<u32*>(dst);
+    
+    int elements_per_src_pixel;
+    switch (src_format) {
+        case GL_RGBA:
+        case GL_BGRA:
+            elements_per_src_pixel = 4;
+            break;
+        case GL_RGB:
+        case GL_BGR:
+            elements_per_src_pixel = 3;
+            break;
+    }
 
     for (int y = y_offset; y < y_offset + src_h; y++) {
         for (int x = x_offset; x < x_offset + src_w; x++) {
@@ -57,10 +70,14 @@ static void blit(const void* src, int src_w, int src_h, void* dst, int x_offset,
 
             dst_data[y * dst_w + x] = a << 24 | r << 16 | g << 8 | b;
         }
+
+        if (src_row_pixels > 0) {
+            src_data += elements_per_src_pixel * (src_row_pixels - src_w);
+        }
     }
 }
 
-void Texture2D::upload_texture_data(GLenum, GLint lod, GLint internal_format, GLsizei width, GLsizei height, GLint, GLenum format, GLenum type, const GLvoid* pixels)
+void Texture2D::upload_texture_data(GLenum, GLint lod, GLint internal_format, GLsizei width, GLsizei height, GLint, GLenum format, GLenum type, const GLvoid* pixels, size_t row_length)
 {
     VERIFY(type == GL_UNSIGNED_BYTE);
 
@@ -80,10 +97,10 @@ void Texture2D::upload_texture_data(GLenum, GLint lod, GLint internal_format, GL
 
     m_internal_format = internal_format;
 
-    blit(pixels, width, height, mip.pixel_data().data(), 0, 0, width, height, format);
+    blit(pixels, width, height, row_length, mip.pixel_data().data(), 0, 0, width, height, format);
 }
 
-void Texture2D::replace_sub_texture_data(GLint lod, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data)
+void Texture2D::replace_sub_texture_data(GLint lod, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data, size_t row_length)
 {
     VERIFY(type == GL_UNSIGNED_BYTE);
 
@@ -92,7 +109,7 @@ void Texture2D::replace_sub_texture_data(GLint lod, GLint xoffset, GLint yoffset
         return;
     }
 
-    blit(data, width, height, mip.pixel_data().data(), xoffset, yoffset, mip.width(), mip.height(), format);
+    blit(data, width, height, row_length, mip.pixel_data().data(), xoffset, yoffset, mip.width(), mip.height(), format);
 }
 
 MipMap const& Texture2D::mipmap(unsigned lod) const

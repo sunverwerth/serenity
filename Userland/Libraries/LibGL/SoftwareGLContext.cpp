@@ -242,21 +242,17 @@ void SoftwareGLContext::gl_end()
         float dyBC = triangle.vertices[1].position.y() - triangle.vertices[2].position.y();
         float area = (dxAB * dyBC) - (dxBC * dyAB);
 
-        if (area == 0.0f)
-            continue;
-
         if (m_cull_faces) {
-            bool is_front = (m_front_face == GL_CCW ? area < 0 : area > 0);
-
-            if (is_front && (m_culled_sides == GL_FRONT || m_culled_sides == GL_FRONT_AND_BACK))
+            if (m_culled_sides == GL_FRONT_AND_BACK)
                 continue;
 
-            if (!is_front && (m_culled_sides == GL_BACK || m_culled_sides == GL_FRONT_AND_BACK))
-                continue;
-        }
+            bool is_front = (m_front_face == GL_CW ? area > 0.0f : area < 0.0f);
 
-        if (area > 0) {
-            swap(triangle.vertices[0], triangle.vertices[1]);
+            if (is_front && (m_culled_sides == GL_FRONT))
+                continue;
+
+            if (!is_front && (m_culled_sides == GL_BACK))
+                continue;
         }
 
         m_rasterizer.submit_triangle(triangle, m_texture_units);
@@ -654,7 +650,7 @@ void SoftwareGLContext::gl_tex_image_2d(GLenum target, GLint level, GLint intern
     //RETURN_WITH_ERROR_IF((width & 1) != 0 || (height & 1) != 0, GL_INVALID_VALUE);
     RETURN_WITH_ERROR_IF(border < 0 || border > 1, GL_INVALID_VALUE);
 
-    m_active_texture_unit->bound_texture_2d()->upload_texture_data(target, level, internal_format, width, height, border, format, type, data);
+    m_active_texture_unit->bound_texture_2d()->upload_texture_data(target, level, internal_format, width, height, border, format, type, data, m_unpack_row_length);
 }
 
 void SoftwareGLContext::gl_tex_sub_image_2d(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* pixels)
@@ -672,7 +668,7 @@ void SoftwareGLContext::gl_tex_sub_image_2d(GLenum target, GLint level, GLint xo
     RETURN_WITH_ERROR_IF(level < 0 || level > Texture2D::LOG2_MAX_TEXTURE_SIZE, GL_INVALID_VALUE);
     RETURN_WITH_ERROR_IF(width < 0 || height < 0 || width > (2 + Texture2D::MAX_TEXTURE_SIZE) || height > (2 + Texture2D::MAX_TEXTURE_SIZE), GL_INVALID_VALUE);
 
-    m_active_texture_unit->bound_texture_2d()->replace_sub_texture_data(level, xoffset, yoffset, width, height, format, type, pixels);
+    m_active_texture_unit->bound_texture_2d()->replace_sub_texture_data(level, xoffset, yoffset, width, height, format, type, pixels, m_unpack_row_length);
 }
 
 void SoftwareGLContext::gl_tex_parameter(GLenum target, GLenum pname, GLfloat param)
@@ -1763,6 +1759,17 @@ void SoftwareGLContext::gl_color_mask(GLboolean red, GLboolean green, GLboolean 
 
     options.color_mask = mask;
     m_rasterizer.set_options(options);
+}
+
+void SoftwareGLContext::gl_pixel_store(GLenum pname, GLdouble param)
+{
+    switch (pname) {
+    case GL_UNPACK_ROW_LENGTH:
+        m_unpack_row_length = static_cast<size_t>(param);
+        break;
+    default:
+        RETURN_WITH_ERROR_IF(true, GL_INVALID_ENUM);
+    }
 }
 
 void SoftwareGLContext::present()

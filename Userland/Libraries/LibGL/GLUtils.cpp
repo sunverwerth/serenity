@@ -134,8 +134,9 @@ void glDepthFunc(GLenum func)
     g_gl_context->gl_depth_func(func);
 }
 
-void glPixelStorei(GLenum, GLint)
+void glPixelStorei(GLenum pname, GLint param)
 {
+    g_gl_context->gl_pixel_store(pname, param);
 }
 
 void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* pixels)
