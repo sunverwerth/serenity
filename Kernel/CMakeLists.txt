@@ -301,6 +301,7 @@ set(KERNEL_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Arch/x86/common/ProcessorInfo.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Arch/x86/common/SafeMem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Arch/x86/common/TrapFrame.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Arch/x86/common/PerformanceMonitoring.cpp
 )
 
 set(AK_SOURCES

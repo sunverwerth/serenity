@@ -10,6 +10,7 @@
 #include <Kernel/ACPI/MultiProcessorParser.h>
 #include <Kernel/Arch/PC/BIOS.h>
 #include <Kernel/Arch/x86/Processor.h>
+#include <Kernel/PerformanceMonitoring.h>
 #include <Kernel/BootInfo.h>
 #include <Kernel/Bus/PCI/Access.h>
 #include <Kernel/Bus/PCI/Initializer.h>
@@ -200,6 +201,8 @@ extern "C" [[noreturn]] UNMAP_AFTER_INIT void init(BootInfo const& boot_info)
     APIC::initialize();
     InterruptManagement::initialize();
     ACPI::initialize();
+
+    PerformanceMonitoring::initialize();
 
     // Initialize TimeManagement before using randomness!
     TimeManagement::initialize(0);
