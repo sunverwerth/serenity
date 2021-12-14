@@ -12,9 +12,9 @@
 
 namespace Core {
 
-ElapsedTimer ElapsedTimer::start_new()
+ElapsedTimer ElapsedTimer::start_new(bool precise)
 {
-    ElapsedTimer timer;
+    ElapsedTimer timer(precise);
     timer.start();
     return timer;
 }

@@ -62,7 +62,7 @@ private:
         m_bitmap = Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRx8888, { RENDER_WIDTH, RENDER_HEIGHT }).release_value_but_fixme_should_propagate_errors();
         m_context = GL::create_context(*m_bitmap);
 
-        start_timer(20);
+        start_timer(1);
 
         GL::make_context_current(m_context);
         glFrontFace(GL_CCW);
@@ -84,6 +84,8 @@ private:
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         glEndList();
+
+        m_timer = Core::ElapsedTimer::start_new(true);
     }
 
     virtual void paint_event(GUI::PaintEvent&) override;
@@ -116,6 +118,7 @@ private:
     float m_texture_scale = 1.0f;
     GLint m_mag_filter = GL_NEAREST;
     float m_zoom = 1;
+    Core::ElapsedTimer m_timer;
 };
 
 void GLContextWidget::paint_event(GUI::PaintEvent& event)
@@ -158,8 +161,6 @@ void GLContextWidget::mousewheel_event(GUI::MouseEvent& event)
 
 void GLContextWidget::timer_event(Core::TimerEvent&)
 {
-    auto timer = Core::ElapsedTimer::start_new();
-
     glCallList(m_init_list);
 
     if (m_rotate_x)
@@ -191,15 +192,15 @@ void GLContextWidget::timer_event(Core::TimerEvent&)
     m_context->present();
 
     if ((m_cycles % 30) == 0) {
-        auto render_time = m_accumulated_time / 30.0;
+        auto render_time = m_timer.elapsed() / 30.0;
         auto frame_rate = render_time > 0 ? 1000 / render_time : 0;
         m_stats->set_text(String::formatted("{:.0f} fps, {:.1f} ms", frame_rate, render_time));
         m_accumulated_time = 0;
+        m_timer.start();
     }
 
     update();
 
-    m_accumulated_time += timer.elapsed();
     m_cycles++;
 }
 

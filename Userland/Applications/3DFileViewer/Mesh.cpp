@@ -40,6 +40,8 @@ void Mesh::draw(float uv_scale)
     const FloatVector4 mesh_ambient_color(0.2f, 0.2f, 0.2f, 1.f);
     const FloatVector4 mesh_diffuse_color(0.6f, 0.6f, 0.6f, 1.f);
 
+    glBegin(GL_TRIANGLES);
+
     for (u32 i = 0; i < m_triangle_list.size(); i++) {
         const auto& triangle = m_triangle_list[i];
 
@@ -88,7 +90,6 @@ void Mesh::draw(float uv_scale)
         const FloatVector4 color = mesh_ambient_color
             + mesh_diffuse_color * light_intensity;
 
-        glBegin(GL_TRIANGLES);
         glColor4f(color.x(), color.y(), color.z(), color.w());
 
         if (is_textured())
@@ -117,7 +118,7 @@ void Mesh::draw(float uv_scale)
             m_vertex_list.at(triangle.c).x,
             m_vertex_list.at(triangle.c).y,
             m_vertex_list.at(triangle.c).z);
-
-        glEnd();
     }
+
+    glEnd();
 }

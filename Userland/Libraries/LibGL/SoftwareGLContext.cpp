@@ -18,6 +18,7 @@
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Painter.h>
 #include <LibGfx/Vector4.h>
+#include <LibSoftGPU/Device.h>
 
 using AK::dbgln;
 
@@ -59,6 +60,30 @@ SoftwareGLContext::SoftwareGLContext(Gfx::Bitmap& frontbuffer)
     : m_frontbuffer(frontbuffer)
     , m_rasterizer(frontbuffer.size())
 {
+    m_device = SoftGPU::create_device();
+    VERIFY(!m_device.is_null());
+
+    m_device_info = m_device->info();
+
+    auto device_initialization = initialize_device();
+    if (device_initialization.is_error())
+        dbgln_if(true, "Error creating device");
+}
+
+ErrorOr<void> SoftwareGLContext::initialize_device()
+{
+    MUST(resize_vertex_buffers(1000));
+    return {};
+}
+
+ErrorOr<void> SoftwareGLContext::resize_vertex_buffers(size_t new_size)
+{
+    m_vertex_buffer_size = new_size;
+    m_vertex_position_buffer = TRY(m_device->try_create_buffer(HAL::GPU::BufferUsageHint::Vertices, sizeof(FloatVector4) * new_size));
+    m_vertex_color_buffer = TRY(m_device->try_create_buffer(HAL::GPU::BufferUsageHint::Vertices, sizeof(FloatVector4) * new_size));
+    m_vertex_texture_coordinate_buffer = TRY(m_device->try_create_buffer(HAL::GPU::BufferUsageHint::Vertices, sizeof(FloatVector4) * new_size));
+    m_vertex_normal_buffer = TRY(m_device->try_create_buffer(HAL::GPU::BufferUsageHint::Vertices, sizeof(FloatVector3) * new_size));
+    return {};
 }
 
 Optional<ContextParameter> SoftwareGLContext::get_context_parameter(GLenum name)
@@ -200,6 +225,104 @@ void SoftwareGLContext::gl_color(GLdouble r, GLdouble g, GLdouble b, GLdouble a)
 void SoftwareGLContext::gl_end()
 {
     APPEND_TO_CALL_LIST_AND_RETURN_IF_NEEDED(gl_end);
+
+    if (m_input_assembly_stage_dirty) {
+        m_input_assembly_stage_config.streams.clear_with_capacity();
+        m_input_assembly_stage_config.streams.append({ .buffer = *m_vertex_position_buffer,
+            .first_element = 0,
+            .element_stride = sizeof(FloatVector4) * 4,
+            .element_type = HAL::GPU::VertexElementType::F32,
+            .element_count = 4,
+            .instance_divisor = 0 });
+        m_input_assembly_stage_config.streams.append({ .buffer = *m_vertex_color_buffer,
+            .first_element = 0,
+            .element_stride = sizeof(FloatVector4) * 4,
+            .element_type = HAL::GPU::VertexElementType::F32,
+            .element_count = 4,
+            .instance_divisor = 0 });
+        m_input_assembly_stage_config.streams.append({ .buffer = *m_vertex_texture_coordinate_buffer,
+            .first_element = 0,
+            .element_stride = sizeof(FloatVector4) * 4,
+            .element_type = HAL::GPU::VertexElementType::F32,
+            .element_count = 4,
+            .instance_divisor = 0 });
+        m_device->configure_input_assembly_stage(m_input_assembly_stage_config);
+        m_input_assembly_stage_dirty = false;
+    }
+
+    if (m_blend_stage_dirty) {
+        m_device->configure_blend_stage(m_blend_stage_config);
+        m_blend_stage_dirty = false;
+    }
+
+    if (m_current_draw_mode == GL_QUADS) {
+        // Special handling for GL_QUADS as our driver model (and modern hardware) does not support quads natively.
+        // Split each quad into two triangles and draw them as a triangle list.
+        auto split_quad = []<typename T>(Vector<T> const& in, Vector<T>& out, size_t index) {
+            out.append(in[index + 0]);
+            out.append(in[index + 1]);
+            out.append(in[index + 2]);
+            out.append(in[index + 2]);
+            out.append(in[index + 3]);
+            out.append(in[index + 0]);
+        };
+
+        m_quad_vertex_positions.clear_with_capacity();
+        m_quad_vertex_colors.clear_with_capacity();
+        m_quad_vertex_texture_coordinates.clear_with_capacity();
+        m_quad_vertex_normals.clear_with_capacity();
+
+        size_t num_vertices = m_vertex_positions.size();
+        for (size_t i = 0; i < num_vertices; i += 4) {
+            split_quad(m_vertex_positions, m_quad_vertex_positions, i);
+            split_quad(m_vertex_colors, m_quad_vertex_colors, i);
+            split_quad(m_vertex_texture_coordinates, m_quad_vertex_texture_coordinates, i);
+            split_quad(m_vertex_normals, m_quad_vertex_normals, i);
+        }
+
+        if (m_quad_vertex_positions.size() > m_vertex_buffer_size)
+            MUST(resize_vertex_buffers(m_quad_vertex_positions.size()));
+
+        m_vertex_position_buffer->update_range(0, m_quad_vertex_positions.data(), m_quad_vertex_positions.size() * sizeof(FloatVector4));
+        m_vertex_color_buffer->update_range(0, m_quad_vertex_colors.data(), m_vertex_colors.size() * sizeof(FloatVector4));
+        m_vertex_texture_coordinate_buffer->update_range(0, m_quad_vertex_texture_coordinates.data(), m_quad_vertex_texture_coordinates.size() * sizeof(FloatVector4));
+        m_vertex_normal_buffer->update_range(0, m_quad_vertex_normals.data(), m_quad_vertex_normals.size() * sizeof(FloatVector3));
+
+        m_device->draw(HAL::GPU::PrimitiveType::TriangleList, 0, m_quad_vertex_positions.size(), 0, 1);
+    } else {
+        HAL::GPU::PrimitiveType primitive_type;
+        switch (m_current_draw_mode) {
+        case GL_TRIANGLES:
+            primitive_type = HAL::GPU::PrimitiveType::TriangleList;
+            break;
+        case GL_TRIANGLE_FAN:
+            primitive_type = HAL::GPU::PrimitiveType::TriangleFan;
+            break;
+        case GL_TRIANGLE_STRIP:
+            primitive_type = HAL::GPU::PrimitiveType::TriangleStrip;
+            break;
+        case GL_POLYGON: // GL_POLYGON is simply rendered as a triangle fan
+            primitive_type = HAL::GPU::PrimitiveType::TriangleFan;
+            break;
+        default:
+            VERIFY_NOT_REACHED();
+        }
+
+        if (m_vertex_positions.size() > m_vertex_buffer_size)
+            MUST(resize_vertex_buffers(m_vertex_positions.size()));
+
+        m_vertex_position_buffer->update_range(0, m_vertex_positions.data(), m_vertex_positions.size() * sizeof(FloatVector4));
+        m_vertex_color_buffer->update_range(0, m_vertex_colors.data(), m_vertex_colors.size() * sizeof(FloatVector4));
+        m_vertex_texture_coordinate_buffer->update_range(0, m_vertex_texture_coordinates.data(), m_vertex_texture_coordinates.size() * sizeof(FloatVector4));
+        m_vertex_normal_buffer->update_range(0, m_vertex_normals.data(), m_vertex_normals.size() * sizeof(FloatVector3));
+
+        m_device->draw(primitive_type, 0, m_vertex_positions.size(), 0, 1);
+    }
+
+    m_vertex_positions.clear_with_capacity();
+    m_vertex_colors.clear_with_capacity();
+    m_vertex_texture_coordinates.clear_with_capacity();
+    m_vertex_normals.clear_with_capacity();
 
     // At this point, the user has effectively specified that they are done with defining the geometry
     // of what they want to draw. We now need to do a few things (https://www.khronos.org/opengl/wiki/Rendering_Pipeline_Overview):
@@ -432,9 +555,9 @@ GLubyte* SoftwareGLContext::gl_get_string(GLenum name)
 
     switch (name) {
     case GL_VENDOR:
-        return reinterpret_cast<GLubyte*>(const_cast<char*>("The SerenityOS Developers"));
+        return reinterpret_cast<GLubyte*>(const_cast<char*>(m_device_info.vendor.characters()));
     case GL_RENDERER:
-        return reinterpret_cast<GLubyte*>(const_cast<char*>("SerenityOS OpenGL"));
+        return reinterpret_cast<GLubyte*>(const_cast<char*>(m_device_info.model.characters()));
     case GL_VERSION:
         return reinterpret_cast<GLubyte*>(const_cast<char*>("1.5"));
     case GL_EXTENSIONS:
@@ -597,6 +720,11 @@ void SoftwareGLContext::gl_translate(GLdouble x, GLdouble y, GLdouble z)
 void SoftwareGLContext::gl_vertex(GLdouble x, GLdouble y, GLdouble z, GLdouble w)
 {
     APPEND_TO_CALL_LIST_AND_RETURN_IF_NEEDED(gl_vertex, x, y, z, w);
+
+    m_vertex_positions.append({ static_cast<float>(x), static_cast<float>(y), static_cast<float>(z), static_cast<float>(w) });
+    m_vertex_colors.append(m_current_vertex_color);
+    m_vertex_texture_coordinates.append(m_current_vertex_tex_coord);
+    m_vertex_normals.append(m_current_vertex_normal);
 
     GLVertex vertex;
 
@@ -2244,6 +2372,12 @@ void SoftwareGLContext::read_from_vertex_attribute_pointer(VertexAttribPointer c
 
 void SoftwareGLContext::gl_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
 {
+    m_blend_stage_dirty = true;
+    m_blend_stage_config.red_write_enabled = !!red;
+    m_blend_stage_config.green_write_enabled = !!green;
+    m_blend_stage_config.blue_write_enabled = !!blue;
+    m_blend_stage_config.alpha_write_enabled = !!alpha;
+
     auto options = m_rasterizer.options();
     auto mask = options.color_mask;
 

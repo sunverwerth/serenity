@@ -23,6 +23,10 @@
 #include <LibGfx/Matrix4x4.h>
 #include <LibGfx/Rect.h>
 #include <LibGfx/Vector3.h>
+#include <LibHAL/GPU/Device.h>
+#include <LibHAL/GPU/DeviceInfo.h>
+#include <LibHAL/GPU/BlendStageConfig.h>
+#include <LibHAL/GPU/InputAssemblyStageConfig.h>
 
 namespace GL {
 
@@ -41,6 +45,9 @@ struct ContextParameter {
 class SoftwareGLContext : public GLContext {
 public:
     SoftwareGLContext(Gfx::Bitmap&);
+
+    ErrorOr<void> initialize_device();
+    ErrorOr<void> resize_vertex_buffers(size_t new_size);
 
     virtual void gl_begin(GLenum mode) override;
     virtual void gl_clear(GLbitfield mask) override;
@@ -363,6 +370,32 @@ private:
     bool m_lighting_enabled { false };
     FloatVector4 m_light_model_ambient { 0.2f, 0.2f, 0.2f, 1.0f };
     GLfloat m_light_model_two_side { 0.0f };
+
+    // GPU device state
+    Vector<FloatVector4> m_vertex_positions;
+    Vector<FloatVector4> m_vertex_colors;
+    Vector<FloatVector4> m_vertex_texture_coordinates;
+    Vector<FloatVector3> m_vertex_normals;
+
+    Vector<FloatVector4> m_quad_vertex_positions;
+    Vector<FloatVector4> m_quad_vertex_colors;
+    Vector<FloatVector4> m_quad_vertex_texture_coordinates;
+    Vector<FloatVector3> m_quad_vertex_normals;
+
+    HAL::GPU::DeviceInfo m_device_info;
+
+    RefPtr<HAL::GPU::Device> m_device;
+    RefPtr<HAL::GPU::Buffer> m_vertex_position_buffer;
+    RefPtr<HAL::GPU::Buffer> m_vertex_color_buffer;
+    RefPtr<HAL::GPU::Buffer> m_vertex_texture_coordinate_buffer;
+    RefPtr<HAL::GPU::Buffer> m_vertex_normal_buffer;
+    size_t m_vertex_buffer_size{0};
+
+    HAL::GPU::InputAssemblyStageConfig m_input_assembly_stage_config;
+    HAL::GPU::BlendStageConfig m_blend_stage_config;
+    
+    bool m_input_assembly_stage_dirty{true};
+    bool m_blend_stage_dirty{true};
 };
 
 }

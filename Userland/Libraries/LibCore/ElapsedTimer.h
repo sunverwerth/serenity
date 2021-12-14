@@ -13,7 +13,7 @@ namespace Core {
 
 class ElapsedTimer {
 public:
-    static ElapsedTimer start_new();
+    static ElapsedTimer start_new(bool precise = false);
 
     ElapsedTimer(bool precise = false)
         : m_precise(precise)
