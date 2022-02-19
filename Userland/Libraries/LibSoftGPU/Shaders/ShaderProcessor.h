@@ -28,6 +28,7 @@ public:
     AK::SIMD::i32x4 mask() const { return m_write_mask; }
 
 private:
+    bool op_discard(Instruction);
     void op_mov(Instruction);
     void op_texture_2d(Instruction);
     void op_add(Instruction);

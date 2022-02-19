@@ -27,6 +27,10 @@ void ShaderProcessor::execute(Shader const& shader)
         switch (instruction.op) {
         case Opcode::Exit:
             break;
+        case Opcode::Discard:
+            if (op_discard(instruction))
+                return;
+            break;
         case Opcode::Mov:
             op_mov(instruction);
             break;
@@ -57,6 +61,29 @@ void ShaderProcessor::execute(Shader const& shader)
         }
         m_instruction_pointer++;
     }
+}
+
+bool ShaderProcessor::op_discard(Instruction)
+{
+    if (m_stack_pointer == 0) {
+        // discarding at top level scope rejects all fragments and ends the program
+        m_write_mask = AK::SIMD::i32x4 { 0, 0, 0, 0 };
+        return true;
+    } else {
+        // mask out all fragments in the stack that are currently active
+        for (size_t i = 0; i < m_write_mask_stack.size(); i++)
+            m_write_mask_stack[i] &= ~m_write_mask;
+
+        // if all fragments at top level are discarded we can exit immediately
+        if (AK::SIMD::none(m_write_mask_stack[0])) {
+            m_write_mask = m_write_mask_stack[0];
+            return true;
+        }
+
+        m_write_mask = AK::SIMD::i32x4 { 0, 0, 0, 0 };
+    }
+
+    return false;
 }
 
 void ShaderProcessor::op_mov(Instruction instruction)

@@ -12,6 +12,7 @@ namespace SoftGPU {
 
 enum class Opcode : u8 {
     Exit,
+    Discard,
     Mov,
     Texture2D,
     Add,
