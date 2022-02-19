@@ -23,4 +23,7 @@ static constexpr int NUM_LIGHTS = 8;
 // FIXME: make this dynamically configurable through ConfigServer
 static constexpr bool CLAMP_DEPRECATED_BEHAVIOR = false;
 
+static constexpr size_t NUM_SHADER_REGISTERS { 1024 };
+static constexpr size_t SHADER_STACK_DEPTH { 8 };
+
 }
