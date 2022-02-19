@@ -30,6 +30,18 @@ void ShaderProcessor::execute(Shader const& shader)
         case Opcode::Texture2D:
             op_texture_2d(instruction);
             break;
+        case Opcode::Add:
+            op_add(instruction);
+            break;
+        case Opcode::Sub:
+            op_sub(instruction);
+            break;
+        case Opcode::Mul:
+            op_mul(instruction);
+            break;
+        case Opcode::Div:
+            op_div(instruction);
+            break;
         }
         m_instruction_pointer++;
     }
@@ -57,6 +69,54 @@ void ShaderProcessor::op_texture_2d(Instruction instruction)
     set_register_with_current_mask(out + 1, sample.y());
     set_register_with_current_mask(out + 2, sample.z());
     set_register_with_current_mask(out + 3, sample.w());
+}
+
+void ShaderProcessor::op_add(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] + m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] + m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] + m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] + m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_sub(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] - m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] - m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] - m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] - m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_mul(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] * m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] * m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] * m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] * m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_div(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] / m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] / m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] / m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] / m_registers[in2 + 3]);
 }
 
 void ShaderProcessor::set_register_with_current_mask(size_t register_index, AK::SIMD::f32x4 value)

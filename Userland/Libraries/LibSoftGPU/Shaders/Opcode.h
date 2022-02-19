@@ -14,6 +14,10 @@ enum class Opcode : u8 {
     Exit,
     Mov,
     Texture2D,
+    Add,
+    Sub,
+    Mul,
+    Div,
 };
 
 }

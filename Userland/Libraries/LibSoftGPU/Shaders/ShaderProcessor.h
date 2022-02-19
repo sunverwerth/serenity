@@ -30,6 +30,10 @@ public:
 private:
     void op_mov(Instruction);
     void op_texture_2d(Instruction);
+    void op_add(Instruction);
+    void op_sub(Instruction);
+    void op_mul(Instruction);
+    void op_div(Instruction);
 
     void set_register_with_current_mask(size_t, AK::SIMD::f32x4);
 
