@@ -21,6 +21,14 @@ public:
     AK::SIMD::f32x4 get_register(size_t index) const { return m_registers[index]; }
     void set_register(size_t index, AK::SIMD::f32x4 v) { m_registers[index] = v; }
 
+    void set_mask(AK::SIMD::i32x4 mask) { m_write_mask = mask; };
+    AK::SIMD::i32x4 mask() const { return m_write_mask; }
+
+private:
+    void op_mov(Instruction);
+
+    void set_register_with_current_mask(size_t, AK::SIMD::f32x4);
+
 private:
     size_t m_stack_pointer { 0 };
     size_t m_instruction_pointer { 0 };
