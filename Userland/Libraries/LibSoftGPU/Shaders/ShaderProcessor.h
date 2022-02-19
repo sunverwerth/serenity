@@ -18,6 +18,9 @@ class ShaderProcessor final {
 public:
     void execute(Shader const&);
 
+    AK::SIMD::f32x4 get_register(size_t index) const { return m_registers[index]; }
+    void set_register(size_t index, AK::SIMD::f32x4 v) { m_registers[index] = v; }
+
 private:
     size_t m_stack_pointer { 0 };
     size_t m_instruction_pointer { 0 };
