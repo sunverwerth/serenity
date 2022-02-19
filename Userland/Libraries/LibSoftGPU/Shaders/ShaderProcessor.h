@@ -13,9 +13,12 @@
 namespace SoftGPU {
 
 class Shader;
+class Sampler;
 
 class ShaderProcessor final {
 public:
+    ShaderProcessor(Array<Sampler, NUM_SAMPLERS> const&);
+
     void execute(Shader const&);
 
     AK::SIMD::f32x4 get_register(size_t index) const { return m_registers[index]; }
@@ -26,6 +29,7 @@ public:
 
 private:
     void op_mov(Instruction);
+    void op_texture_2d(Instruction);
 
     void set_register_with_current_mask(size_t, AK::SIMD::f32x4);
 
@@ -35,6 +39,7 @@ private:
     AK::SIMD::i32x4 m_write_mask;
     Array<AK::SIMD::i32x4, SHADER_STACK_DEPTH> m_write_mask_stack;
     Array<AK::SIMD::f32x4, NUM_SHADER_REGISTERS> m_registers;
+    Array<Sampler, NUM_SAMPLERS> const& m_samplers;
 };
 
 }
