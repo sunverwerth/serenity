@@ -35,11 +35,18 @@ private:
     void op_sub(Instruction);
     void op_mul(Instruction);
     void op_div(Instruction);
+    void op_cmp_lt(Instruction);
+    void op_cmp_gt(Instruction);
+    void op_cmp_lte(Instruction);
+    void op_cmp_gte(Instruction);
+    void op_cmp_eq(Instruction);
+    void op_cmp_neq(Instruction);
     void op_if(Instruction);
     void op_else(Instruction);
     void op_end_if(Instruction);
 
     void set_register_with_current_mask(size_t, AK::SIMD::f32x4);
+    void set_register_with_current_mask(size_t, AK::SIMD::i32x4);
 
 private:
     size_t m_stack_pointer { 0 };

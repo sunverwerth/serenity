@@ -49,6 +49,24 @@ void ShaderProcessor::execute(Shader const& shader)
         case Opcode::Div:
             op_div(instruction);
             break;
+        case Opcode::CmpLt:
+            op_cmp_lt(instruction);
+            break;
+        case Opcode::CmpGt:
+            op_cmp_gt(instruction);
+            break;
+        case Opcode::CmpLte:
+            op_cmp_lte(instruction);
+            break;
+        case Opcode::CmpGte:
+            op_cmp_gte(instruction);
+            break;
+        case Opcode::CmpEq:
+            op_cmp_eq(instruction);
+            break;
+        case Opcode::CmpNeq:
+            op_cmp_neq(instruction);
+            break;
         case Opcode::If:
             op_if(instruction);
             break;
@@ -158,6 +176,78 @@ void ShaderProcessor::op_div(Instruction instruction)
     set_register_with_current_mask(out + 3, m_registers[in1 + 3] / m_registers[in2 + 3]);
 }
 
+void ShaderProcessor::op_cmp_lt(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] < m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] < m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] < m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] < m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_cmp_gt(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] > m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] > m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] > m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] > m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_cmp_lte(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] <= m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] <= m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] <= m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] <= m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_cmp_gte(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] >= m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] >= m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] >= m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] >= m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_cmp_eq(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] == m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] == m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] == m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] == m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_cmp_neq(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    set_register_with_current_mask(out, m_registers[in1] != m_registers[in2]);
+    set_register_with_current_mask(out + 1, m_registers[in1 + 1] != m_registers[in2 + 1]);
+    set_register_with_current_mask(out + 2, m_registers[in1 + 2] != m_registers[in2 + 2]);
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3] != m_registers[in2 + 3]);
+}
+
 void ShaderProcessor::op_if(Instruction instruction)
 {
     m_write_mask_stack[m_stack_pointer++] = m_write_mask;
@@ -188,6 +278,11 @@ void ShaderProcessor::op_end_if(Instruction)
 void ShaderProcessor::set_register_with_current_mask(size_t register_index, AK::SIMD::f32x4 value)
 {
     m_registers[register_index] = m_write_mask ? value : m_registers[register_index];
+}
+
+void ShaderProcessor::set_register_with_current_mask(size_t register_index, AK::SIMD::i32x4 value)
+{
+    m_registers[register_index] = m_write_mask ? (AK::SIMD::f32x4)value : m_registers[register_index];
 }
 
 }
