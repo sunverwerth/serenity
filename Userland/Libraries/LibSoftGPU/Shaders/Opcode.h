@@ -28,6 +28,7 @@ enum class Opcode : u8 {
     If,
     Else,
     EndIf,
+    Blend,
 };
 
 }

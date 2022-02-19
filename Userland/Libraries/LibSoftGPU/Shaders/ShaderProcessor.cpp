@@ -76,6 +76,9 @@ void ShaderProcessor::execute(Shader const& shader)
         case Opcode::EndIf:
             op_end_if(instruction);
             break;
+        case Opcode::Blend:
+            op_blend(instruction);
+            break;
         }
         m_instruction_pointer++;
     }
@@ -246,6 +249,20 @@ void ShaderProcessor::op_cmp_neq(Instruction instruction)
     set_register_with_current_mask(out + 1, m_registers[in1 + 1] != m_registers[in2 + 1]);
     set_register_with_current_mask(out + 2, m_registers[in1 + 2] != m_registers[in2 + 2]);
     set_register_with_current_mask(out + 3, m_registers[in1 + 3] != m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_blend(Instruction instruction)
+{
+    const size_t in1 = instruction.arg1 * 4;
+    const size_t in2 = instruction.arg2 * 4;
+    const size_t out = instruction.out_register * 4;
+
+    auto alpha = m_registers[in2 + 3];
+
+    set_register_with_current_mask(out, mix(m_registers[in1], m_registers[in2], alpha));
+    set_register_with_current_mask(out + 1, mix(m_registers[in1 + 1], m_registers[in2 + 1], alpha));
+    set_register_with_current_mask(out + 2, mix(m_registers[in1 + 2], m_registers[in2 + 2], alpha));
+    set_register_with_current_mask(out + 3, m_registers[in1 + 3]);
 }
 
 void ShaderProcessor::op_if(Instruction instruction)
