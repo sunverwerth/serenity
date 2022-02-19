@@ -18,6 +18,9 @@ enum class Opcode : u8 {
     Sub,
     Mul,
     Div,
+    If,
+    Else,
+    EndIf,
 };
 
 }

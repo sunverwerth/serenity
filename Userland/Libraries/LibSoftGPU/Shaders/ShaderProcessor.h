@@ -34,6 +34,9 @@ private:
     void op_sub(Instruction);
     void op_mul(Instruction);
     void op_div(Instruction);
+    void op_if(Instruction);
+    void op_else(Instruction);
+    void op_end_if(Instruction);
 
     void set_register_with_current_mask(size_t, AK::SIMD::f32x4);
 

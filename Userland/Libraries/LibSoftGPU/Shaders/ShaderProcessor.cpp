@@ -5,6 +5,7 @@
  */
 
 #include <AK/Format.h>
+#include <AK/SIMDExtras.h>
 #include <LibSoftGPU/Sampler.h>
 #include <LibSoftGPU/Shaders/Shader.h>
 #include <LibSoftGPU/Shaders/ShaderProcessor.h>
@@ -19,6 +20,8 @@ ShaderProcessor::ShaderProcessor(Array<Sampler, NUM_SAMPLERS> const& samplers)
 void ShaderProcessor::execute(Shader const& shader)
 {
     m_instruction_pointer = shader.entry_point();
+    m_stack_pointer = 0;
+
     while (m_instruction_pointer < shader.num_instructions()) {
         auto instruction = shader.instruction_at(m_instruction_pointer);
         switch (instruction.op) {
@@ -41,6 +44,15 @@ void ShaderProcessor::execute(Shader const& shader)
             break;
         case Opcode::Div:
             op_div(instruction);
+            break;
+        case Opcode::If:
+            op_if(instruction);
+            break;
+        case Opcode::Else:
+            op_else(instruction);
+            break;
+        case Opcode::EndIf:
+            op_end_if(instruction);
             break;
         }
         m_instruction_pointer++;
@@ -117,6 +129,33 @@ void ShaderProcessor::op_div(Instruction instruction)
     set_register_with_current_mask(out + 1, m_registers[in1 + 1] / m_registers[in2 + 1]);
     set_register_with_current_mask(out + 2, m_registers[in1 + 2] / m_registers[in2 + 2]);
     set_register_with_current_mask(out + 3, m_registers[in1 + 3] / m_registers[in2 + 3]);
+}
+
+void ShaderProcessor::op_if(Instruction instruction)
+{
+    m_write_mask_stack[m_stack_pointer++] = m_write_mask;
+    m_write_mask &= (AK::SIMD::i32x4)m_registers[instruction.arg1 * 4];
+    const size_t skip = instruction.arg2;
+
+    if (AK::SIMD::none(m_write_mask)) {
+        m_instruction_pointer += skip;
+        return;
+    }
+}
+
+void ShaderProcessor::op_else(Instruction instruction)
+{
+    m_write_mask = ~m_write_mask;
+    const size_t skip = instruction.arg2;
+    if (AK::SIMD::none(m_write_mask)) {
+        m_instruction_pointer += skip;
+        return;
+    }
+}
+
+void ShaderProcessor::op_end_if(Instruction)
+{
+    m_write_mask = m_write_mask_stack[--m_stack_pointer];
 }
 
 void ShaderProcessor::set_register_with_current_mask(size_t register_index, AK::SIMD::f32x4 value)
