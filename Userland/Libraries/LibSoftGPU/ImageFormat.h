@@ -19,6 +19,7 @@ enum class ImageFormat {
     BGRA8888,
     L8,
     L8A8,
+    RGBA32F,
 };
 
 static constexpr size_t element_size(ImageFormat format)
@@ -35,6 +36,8 @@ static constexpr size_t element_size(ImageFormat format)
     case ImageFormat::RGBA8888:
     case ImageFormat::BGRA8888:
         return 4;
+    case ImageFormat::RGBA32F:
+        return 16;
     default:
         VERIFY_NOT_REACHED();
     }
@@ -109,6 +112,8 @@ inline static FloatVector4 unpack_color(void const* ptr, ImageFormat format)
             luminance_and_alpha[1] * one_over_255,
         };
     }
+    case ImageFormat::RGBA32F:
+        return *reinterpret_cast<FloatVector4 const*>(ptr);
     default:
         VERIFY_NOT_REACHED();
     }
@@ -116,6 +121,11 @@ inline static FloatVector4 unpack_color(void const* ptr, ImageFormat format)
 
 inline static void pack_color(FloatVector4 const& color, void* ptr, ImageFormat format)
 {
+    if (format == ImageFormat::RGBA32F) {
+        *reinterpret_cast<FloatVector4*>(ptr) = color;
+        return;
+    }
+
     auto r = static_cast<u8>(clamp(color.x(), 0.0f, 1.0f) * 255);
     auto g = static_cast<u8>(clamp(color.y(), 0.0f, 1.0f) * 255);
     auto b = static_cast<u8>(clamp(color.z(), 0.0f, 1.0f) * 255);

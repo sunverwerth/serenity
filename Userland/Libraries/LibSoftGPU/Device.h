@@ -28,6 +28,8 @@
 #include <LibSoftGPU/Light/Light.h>
 #include <LibSoftGPU/Light/Material.h>
 #include <LibSoftGPU/Sampler.h>
+#include <LibSoftGPU/Shaders/Shader.h>
+#include <LibSoftGPU/Shaders/ShaderProcessor.h>
 #include <LibSoftGPU/Triangle.h>
 #include <LibSoftGPU/Vertex.h>
 
@@ -164,6 +166,8 @@ private:
     Array<Material, 2u> m_materials;
     RasterPosition m_raster_position;
     Array<StencilConfiguration, 2u> m_stencil_configuration;
+    ShaderProcessor m_fragment_processor;
+    Shader m_shader;
 };
 
 }

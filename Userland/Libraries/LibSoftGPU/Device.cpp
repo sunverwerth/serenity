@@ -572,6 +572,13 @@ void Device::rasterize_triangle(const Triangle& triangle)
 
 Device::Device(Gfx::IntSize const& size)
     : m_frame_buffer(FrameBuffer<ColorType, DepthType, StencilType>::try_create(size).release_value_but_fixme_should_propagate_errors())
+    , m_fragment_processor { m_samplers }
+    , m_shader(Vector {
+                   Instruction { Opcode::Texture2D, 100, 0, 1 },
+                   //Instruction { Opcode::Texture2D, 101, 1, 2 },
+                   Instruction { Opcode::Sub, 0, 0, 100 },
+               },
+          0)
 {
     m_options.scissor_box = m_frame_buffer->rect();
     m_options.viewport = m_frame_buffer->rect();
@@ -654,6 +661,26 @@ void Device::draw_primitives(PrimitiveType primitive_type, FloatMatrix4x4 const&
     // 6.   The vertices are then sent off to the rasterizer and drawn to the screen
 
     m_enabled_texture_units = enabled_texture_units;
+
+    static Vector<Instruction> instructions;
+    instructions.clear_with_capacity();
+    for (size_t i = 0; i < enabled_texture_units.size(); i++) {
+        auto uv_register = static_cast<u8>(1 + i);
+        instructions.append({ Opcode::Texture2D, 100, static_cast<u8>(enabled_texture_units[i]), uv_register });
+
+        switch (m_samplers[enabled_texture_units[i]].config().fixed_function_texture_env_mode) {
+        case TextureEnvMode::Replace:
+            instructions.append({ Opcode::Mov, 0, 100, 0 });
+            break;
+        case TextureEnvMode::Modulate:
+            instructions.append({ Opcode::Mul, 0, 100, 0 });
+            break;
+        case TextureEnvMode::Decal:
+            instructions.append({ Opcode::Blend, 0, 0, 100 });
+            break;
+        }
+    }
+    m_shader = Shader { instructions, 0 };
 
     m_triangle_list.clear_with_capacity();
     m_processed_triangles.clear_with_capacity();
@@ -967,6 +994,7 @@ void Device::draw_primitives(PrimitiveType primitive_type, FloatMatrix4x4 const&
 
 ALWAYS_INLINE void Device::shade_fragments(PixelQuad& quad)
 {
+#if 0
     quad.out_color = quad.vertex_color;
 
     for (size_t i : m_enabled_texture_units) {
@@ -1025,6 +1053,29 @@ ALWAYS_INLINE void Device::shade_fragments(PixelQuad& quad)
         quad.out_color.set_y(mix(fog_color.y(), quad.out_color.y(), factor));
         quad.out_color.set_z(mix(fog_color.z(), quad.out_color.z(), factor));
     }
+#else
+    m_fragment_processor.set_mask(quad.mask);
+
+    m_fragment_processor.set_register(0, quad.vertex_color.x());
+    m_fragment_processor.set_register(1, quad.vertex_color.y());
+    m_fragment_processor.set_register(2, quad.vertex_color.z());
+    m_fragment_processor.set_register(3, quad.vertex_color.w());
+    for (int i = 0; i < NUM_SAMPLERS; i++) {
+        m_fragment_processor.set_register(i * 4 + 4, quad.texture_coordinates[i].x());
+        m_fragment_processor.set_register(i * 4 + 5, quad.texture_coordinates[i].y());
+        m_fragment_processor.set_register(i * 4 + 6, quad.texture_coordinates[i].z());
+        m_fragment_processor.set_register(i * 4 + 7, quad.texture_coordinates[i].w());
+    }
+
+    m_fragment_processor.execute(m_shader);
+
+    quad.out_color.set_x(m_fragment_processor.get_register(0));
+    quad.out_color.set_y(m_fragment_processor.get_register(1));
+    quad.out_color.set_z(m_fragment_processor.get_register(2));
+    quad.out_color.set_w(m_fragment_processor.get_register(3));
+
+    quad.mask = m_fragment_processor.mask();
+#endif
 }
 
 ALWAYS_INLINE bool Device::test_alpha(PixelQuad& quad)
