@@ -30,6 +30,7 @@ public:
     }
 
     void fill(T value, Gfx::IntRect const& rect) { m_buffer->fill(value, rect.left(), rect.right(), rect.top(), rect.bottom(), 0, 0); }
+    void fill(T value) { m_buffer->fill(value); }
     ALWAYS_INLINE T* scanline(int y) { return m_buffer->buffer_pointer(0, y, 0); }
     ALWAYS_INLINE T const* scanline(int y) const { return m_buffer->buffer_pointer(0, y, 0); }
 

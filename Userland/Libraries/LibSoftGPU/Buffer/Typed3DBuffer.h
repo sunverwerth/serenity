@@ -39,6 +39,12 @@ public:
         return &m_data[z * m_width * m_height + y * m_width + x];
     }
 
+    void fill(T value)
+    {
+        for (auto& element: m_data)
+            element = value;
+    }
+
     void fill(T value, int x1, int x2, int y1, int y2, int z1, int z2)
     {
         for (auto z = z1; z <= z2; ++z) {

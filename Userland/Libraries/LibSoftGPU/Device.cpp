@@ -511,8 +511,8 @@ void Device::rasterize_triangle(Triangle const& triangle)
             else
                 quad.vertex_color = expand4(vertex0.color);
 
-            for (size_t i = 0; i < GPU::NUM_SAMPLERS; ++i)
-                quad.texture_coordinates[i] = interpolate(expand4(vertex0.tex_coords[i]), expand4(vertex1.tex_coords[i]), expand4(vertex2.tex_coords[i]), quad.barycentrics);
+            for (size_t t: m_enabled_texture_units)
+                quad.texture_coordinates[t] = interpolate(expand4(vertex0.tex_coords[t]), expand4(vertex1.tex_coords[t]), expand4(vertex2.tex_coords[t]), quad.barycentrics);
 
             if (m_options.fog_enabled)
                 quad.fog_depth = interpolate(vertex0_fog_depth, vertex1_fog_depth, vertex2_fog_depth, quad.barycentrics);
@@ -1076,19 +1076,25 @@ void Device::clear_color(FloatVector4 const& color)
 {
     auto const fill_color = to_bgra32(color);
 
-    auto clear_rect = m_frame_buffer->rect();
-    if (m_options.scissor_enabled)
-        clear_rect.intersect(m_options.scissor_box);
+    if (!m_options.scissor_enabled) {
+        m_frame_buffer->color_buffer()->fill(fill_color);
+        return;
+    }
 
+    auto clear_rect = m_frame_buffer->rect();
+    clear_rect.intersect(m_options.scissor_box);
     m_frame_buffer->color_buffer()->fill(fill_color, clear_rect);
 }
 
 void Device::clear_depth(GPU::DepthType depth)
 {
-    auto clear_rect = m_frame_buffer->rect();
-    if (m_options.scissor_enabled)
-        clear_rect.intersect(m_options.scissor_box);
+    if (!m_options.scissor_enabled) {
+        m_frame_buffer->depth_buffer()->fill(depth);
+        return;
+    }
 
+    auto clear_rect = m_frame_buffer->rect();
+    clear_rect.intersect(m_options.scissor_box);
     m_frame_buffer->depth_buffer()->fill(depth, clear_rect);
 }
 
