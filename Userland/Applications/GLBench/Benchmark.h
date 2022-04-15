@@ -11,16 +11,21 @@ public:
 
     void add(NonnullOwnPtr<Scenario>&& scenario) { m_scenarios.append(move(scenario)); }
 
-    void run()
+    void run(StringView selected_scenario)
     {
         initialize();
+        
         for (auto& scenario : m_scenarios)
-            scenario->run();
+            if (selected_scenario.is_empty() || scenario->name() == selected_scenario)
+                scenario->run();
+
         shutdown();
     }
 
-    virtual void initialize() = 0;
-    virtual void shutdown() = 0;
+    virtual void initialize() {};
+    virtual void shutdown() {};
+
+    Vector<NonnullOwnPtr<Scenario>> const& scenarios() const { return m_scenarios; }
 
 private:
     Vector<NonnullOwnPtr<Scenario>> m_scenarios;
