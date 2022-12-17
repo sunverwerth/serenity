@@ -17,6 +17,7 @@ static HashMap<DeprecatedString, DeprecatedString> const s_driver_path_map
 {
 #if defined(AK_OS_SERENITY)
     { "softgpu", "libsoftgpu.so.serenity" },
+    { "virtgpu", "libvirtgpu.so.serenity" },
 #elif defined(AK_OS_MACOS)
     { "softgpu", "liblagom-softgpu.dylib" },
 #else
