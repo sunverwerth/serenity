@@ -9,6 +9,7 @@
 #include <AK/NonnullOwnPtr.h>
 #include <Kernel/API/VirGL.h>
 #include <LibCore/System.h>
+#include <LibVirtGPU/Buffer.h>
 #include <LibVirtGPU/CommandBufferBuilder.h>
 #include <LibVirtGPU/Device.h>
 #include <LibVirtGPU/Image.h>
@@ -369,6 +370,11 @@ ErrorOr<NonnullRefPtr<GPU::Shader>> Device::create_shader(GPU::IR::Shader const&
 {
     dbgln("VirtGPU::Device::create_shader(): unimplemented");
     return adopt_ref(*new Shader(this));
+}
+
+ErrorOr<NonnullRefPtr<GPU::Buffer>> Device::create_buffer(size_t)
+{
+    return adopt_ref(*new Buffer(this));
 }
 
 void Device::set_sampler_config(unsigned, GPU::SamplerConfig const&)

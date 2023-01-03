@@ -16,6 +16,7 @@
 #include <LibGfx/Painter.h>
 #include <LibGfx/Vector2.h>
 #include <LibGfx/Vector3.h>
+#include <LibSoftGPU/Buffer.h>
 #include <LibSoftGPU/Config.h>
 #include <LibSoftGPU/Device.h>
 #include <LibSoftGPU/Image.h>
@@ -1648,6 +1649,12 @@ ErrorOr<NonnullRefPtr<GPU::Shader>> Device::create_shader(GPU::IR::Shader const&
     ShaderCompiler compiler;
     auto shader = TRY(compiler.compile(this, intermediate_representation));
     return shader;
+}
+
+ErrorOr<NonnullRefPtr<GPU::Buffer>> Device::create_buffer(size_t size)
+{
+    auto storage = TRY(FixedArray<u8>::try_create(size));
+    return adopt_ref(*new Buffer(this, move(storage)));
 }
 
 void Device::set_sampler_config(unsigned sampler, GPU::SamplerConfig const& config)
