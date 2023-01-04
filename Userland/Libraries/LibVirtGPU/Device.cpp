@@ -230,7 +230,7 @@ void Device::draw_primitives(GPU::PrimitiveType primitive_type, FloatMatrix4x4 c
     MUST(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor));
 
     // Transfer data from kernel virgl transfer region to host resource
-    builder.append_transfer3d(m_vbo_resource_id, sizeof(VertexData) * m_vertices.size(), 1, 1, VIRGL_DATA_DIR_GUEST_TO_HOST);
+    builder.append_transfer3d(m_vbo_resource_id, 0, 0, 0, sizeof(VertexData) * m_vertices.size(), 1, 1, VIRGL_DATA_DIR_GUEST_TO_HOST);
     builder.append_end_transfers_3d();
 
     // Set the constant buffer to the identity matrix
@@ -294,7 +294,7 @@ void Device::blit_from_color_buffer(Gfx::Bitmap& front_buffer)
 {
     // Transfer data back from hypervisor to kernel transfer region
     CommandBufferBuilder builder;
-    builder.append_transfer3d(m_drawtarget, front_buffer.size().width(), front_buffer.size().height(), 1, VIRGL_DATA_DIR_HOST_TO_GUEST);
+    builder.append_transfer3d(m_drawtarget, 0, 0, 0, front_buffer.size().width(), front_buffer.size().height(), 1, VIRGL_DATA_DIR_HOST_TO_GUEST);
     builder.append_end_transfers_3d();
     MUST(upload_command_buffer(builder.build()));
 

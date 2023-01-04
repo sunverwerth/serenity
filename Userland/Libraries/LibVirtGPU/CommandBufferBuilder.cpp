@@ -99,7 +99,7 @@ void CommandBufferBuilder::append_set_tweaks(u32 id, u32 value)
     builder.appendu32(value);
 }
 
-void CommandBufferBuilder::append_transfer3d(Protocol::ResourceID resource, u32 width, u32 height, u32 depth, u32 direction)
+void CommandBufferBuilder::append_transfer3d(Protocol::ResourceID resource, u32 x, u32 y, u32 z, u32 width, u32 height, u32 depth, u32 direction)
 {
     CommandBuilder builder(m_buffer, Protocol::VirGLCommand::TRANSFER3D, Protocol::ObjectType::NONE);
     builder.appendu32(resource.value()); // res_handle
@@ -110,9 +110,9 @@ void CommandBufferBuilder::append_transfer3d(Protocol::ResourceID resource, u32 
     builder.appendu32(242);       // usage
     builder.appendu32(0);         // stride
     builder.appendu32(0);         // layer_stride
-    builder.appendu32(0);         // x
-    builder.appendu32(0);         // y
-    builder.appendu32(0);         // z
+    builder.appendu32(x);         // x
+    builder.appendu32(y);         // y
+    builder.appendu32(z);         // z
     builder.appendu32(width);     // width
     builder.appendu32(height);    // height
     builder.appendu32(depth);     // depth
