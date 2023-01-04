@@ -20,7 +20,7 @@ namespace VirtGPU {
 class CommandBufferBuilder {
 public:
     void append_set_tweaks(u32 id, u32 value);
-    void append_transfer3d(Protocol::ResourceID resource, u32 width, u32 height = 1, u32 depth = 1, u32 direction = VIRGL_DATA_DIR_GUEST_TO_HOST);
+    void append_transfer3d(Protocol::ResourceID resource, u32 width, u32 height, u32 depth, u32 direction);
     void append_end_transfers_3d();
     void append_draw_vbo(Protocol::PipePrimitiveTypes, u32 count);
     void append_clear(float r, float g, float b, float a);
