@@ -99,7 +99,7 @@ void CommandBufferBuilder::append_set_tweaks(u32 id, u32 value)
     builder.appendu32(value);
 }
 
-void CommandBufferBuilder::append_transfer3d(Protocol::ResourceID resource, size_t width, size_t height, size_t depth, size_t direction)
+void CommandBufferBuilder::append_transfer3d(Protocol::ResourceID resource, u32 width, u32 height, u32 depth, u32 direction)
 {
     CommandBuilder builder(m_buffer, Protocol::VirGLCommand::TRANSFER3D, Protocol::ObjectType::NONE);
     builder.appendu32(resource.value()); // res_handle
