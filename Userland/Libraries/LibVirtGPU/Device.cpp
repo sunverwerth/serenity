@@ -360,9 +360,29 @@ ErrorOr<NonnullRefPtr<GPU::Shader>> Device::create_shader(GPU::IR::Shader const&
     return adopt_ref(*new Shader(this));
 }
 
-ErrorOr<NonnullRefPtr<GPU::Buffer>> Device::create_buffer(size_t)
+ErrorOr<NonnullRefPtr<GPU::Buffer>> Device::create_buffer(size_t size)
 {
-    return adopt_ref(*new Buffer(this));
+    VERIFY(size <= NumericLimits<u32>::max());
+
+    VirGL3DResourceSpec buffer_spec {
+        .target = to_underlying(Gallium::PipeTextureTarget::BUFFER),
+        .format = 0,
+        // Note: VirGLRenderer seems to use the bind flag mostly for verifying the rest of the arguments.
+        // Since there is no real distinction between different kinds of buffers in OpenGL we use VIRGL_BIND_VERTEX_BUFFER
+        // As a standin for a generic buffer object.
+        .bind = to_underlying(Protocol::BindTarget::VIRGL_BIND_VERTEX_BUFFER),
+        .width = static_cast<u32>(size),
+        .height = 1,
+        .depth = 1,
+        .array_size = 1,
+        .last_level = 0,
+        .nr_samples = 0,
+        .flags = 0,
+        .created_resource_id = 0,
+    };
+    auto resource_id = TRY(create_virgl_resource(buffer_spec));
+
+    return adopt_ref(*new Buffer(*this, resource_id, size));
 }
 
 void Device::set_sampler_config(unsigned, GPU::SamplerConfig const&)

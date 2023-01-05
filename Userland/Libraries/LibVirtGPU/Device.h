@@ -17,6 +17,8 @@
 namespace VirtGPU {
 
 class Device final : public GPU::Device {
+    friend class Buffer;
+
 public:
     Device(NonnullRefPtr<Core::File>);
 
