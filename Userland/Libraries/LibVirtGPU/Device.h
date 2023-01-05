@@ -66,6 +66,8 @@ private:
     Protocol::ObjectHandle allocate_handle();
     ErrorOr<Protocol::ResourceID> create_virgl_resource(VirGL3DResourceSpec&);
     ErrorOr<void> upload_command_buffer(Vector<u32> const&);
+    ErrorOr<void> write_to_kernel_buffer(size_t offset, size_t size, void const* data);
+    ErrorOr<void> read_from_kernel_buffer(size_t offset, size_t size, void* data);
 
     NonnullRefPtr<Core::File> m_gpu_file;
 

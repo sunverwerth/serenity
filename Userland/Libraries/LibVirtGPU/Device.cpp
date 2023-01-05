@@ -221,13 +221,7 @@ void Device::draw_primitives(GPU::PrimitiveType primitive_type, FloatMatrix4x4 c
     builder.append_set_constant_buffer(m_constant_buffer_data);
 
     // Transfer data from vertices array to kernel virgl transfer region
-    VirGLTransferDescriptor descriptor {
-        .data = m_vertices.data(),
-        .offset_in_region = 0,
-        .num_bytes = sizeof(VertexData) * m_vertices.size(),
-        .direction = VIRGL_DATA_DIR_GUEST_TO_HOST,
-    };
-    MUST(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor));
+    MUST(write_to_kernel_buffer(0, sizeof(VertexData) * m_vertices.size(), m_vertices.data()));
 
     // Transfer data from kernel virgl transfer region to host resource
     builder.append_transfer3d(m_vbo_resource_id, 0, 0, 0, sizeof(VertexData) * m_vertices.size(), 1, 1, VIRGL_DATA_DIR_GUEST_TO_HOST);
@@ -299,13 +293,7 @@ void Device::blit_from_color_buffer(Gfx::Bitmap& front_buffer)
     MUST(upload_command_buffer(builder.build()));
 
     // Copy from kernel transfer region to userspace
-    VirGLTransferDescriptor descriptor {
-        .data = front_buffer.scanline_u8(0),
-        .offset_in_region = 0,
-        .num_bytes = front_buffer.size().width() * front_buffer.size().height() * sizeof(u32),
-        .direction = VIRGL_DATA_DIR_HOST_TO_GUEST,
-    };
-    MUST(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor));
+    MUST(read_from_kernel_buffer(0, front_buffer.size().width() * front_buffer.size().height() * sizeof(u32), front_buffer.scanline_u8(0)));
 }
 
 void Device::blit_from_color_buffer(NonnullRefPtr<GPU::Image>, u32, Vector2<u32>, Vector2<i32>, Vector3<i32>)
@@ -449,6 +437,32 @@ ErrorOr<Protocol::ResourceID> Device::create_virgl_resource(VirGL3DResourceSpec&
 {
     TRY(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_CREATE_RESOURCE, &spec));
     return Protocol::ResourceID { spec.created_resource_id };
+}
+
+ErrorOr<void> Device::write_to_kernel_buffer(size_t offset, size_t size, void const* data)
+{
+    VirGLTransferDescriptor descriptor {
+        // There is a shared transfer descriptor for reads and writes.
+        // Unfortunately we need to const_cast here.
+        .data = const_cast<void*>(data),
+        .offset_in_region = offset,
+        .num_bytes = size,
+        .direction = VIRGL_DATA_DIR_GUEST_TO_HOST,
+    };
+    TRY(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor));
+    return {};
+}
+
+ErrorOr<void> Device::read_from_kernel_buffer(size_t offset, size_t size, void* data)
+{
+    VirGLTransferDescriptor descriptor {
+        .data = data,
+        .offset_in_region = offset,
+        .num_bytes = size,
+        .direction = VIRGL_DATA_DIR_HOST_TO_GUEST,
+    };
+    TRY(Core::System::ioctl(m_gpu_file->fd(), VIRGL_IOCTL_TRANSFER_DATA, &descriptor));
+    return {};
 }
 
 }
