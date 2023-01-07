@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Stephan Unverwerth <s.unverwerth@serenityos.org>
+ * Copyright (c) 2021-2023, Stephan Unverwerth <s.unverwerth@serenityos.org>
  * Copyright (c) 2021, Jesse Buhagiar <jooster669@gmail.com>
  * Copyright (c) 2022, Jelle Raaijmakers <jelle@gmta.nl>
  *
@@ -21,7 +21,7 @@
 #include <LibSoftGPU/Device.h>
 #include <LibSoftGPU/Image.h>
 #include <LibSoftGPU/PixelConverter.h>
-#include <LibSoftGPU/PixelQuad.h>
+#include <LibSoftGPU/ShaderWorkItem.h>
 #include <LibSoftGPU/SIMD.h>
 #include <LibSoftGPU/Shader.h>
 #include <LibSoftGPU/ShaderCompiler.h>
@@ -186,7 +186,7 @@ void Device::setup_blend_factors()
     }
 }
 
-ALWAYS_INLINE static void test_alpha(PixelQuad& quad, GPU::AlphaTestFunction alpha_test_function, f32x4 const& reference_value)
+ALWAYS_INLINE static void test_alpha(ShaderWorkItem& quad, GPU::AlphaTestFunction alpha_test_function, f32x4 const& reference_value)
 {
     auto const alpha = quad.get_output_float(SHADER_OUTPUT_FIRST_COLOR + 3);
 
@@ -288,7 +288,7 @@ ALWAYS_INLINE void Device::rasterize(Gfx::IntRect& render_bounds, CB1 set_covera
     // FIXME: this could be embarrassingly parallel
     for (int qy = qy0; qy <= qy1; qy += 2) {
         for (int qx = qx0; qx <= qx1; qx += 2) {
-            PixelQuad quad;
+            ShaderWorkItem quad;
             quad.screen_coordinates = {
                 i32x4 { qx, qx + 1, qx, qx + 1 },
                 i32x4 { qy, qy, qy + 1, qy + 1 },
@@ -1212,7 +1212,7 @@ void Device::draw_primitives(GPU::PrimitiveType primitive_type, FloatMatrix4x4 c
         rasterize_triangle(triangle);
 }
 
-ALWAYS_INLINE void Device::shade_fragments(PixelQuad& quad)
+ALWAYS_INLINE void Device::shade_fragments(ShaderWorkItem& quad)
 {
     if (m_current_fragment_shader) {
         m_shader_processor.execute(quad, *m_current_fragment_shader);

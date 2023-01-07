@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Stephan Unverwerth <s.unverwerth@serenityos.org>
+ * Copyright (c) 2022-2023, Stephan Unverwerth <s.unverwerth@serenityos.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -10,7 +10,7 @@
 #include <AK/SIMD.h>
 #include <AK/Vector.h>
 #include <LibGPU/Config.h>
-#include <LibSoftGPU/PixelQuad.h>
+#include <LibSoftGPU/ShaderWorkItem.h>
 #include <LibSoftGPU/Sampler.h>
 
 namespace SoftGPU {
@@ -24,14 +24,14 @@ public:
     {
     }
 
-    void execute(PixelQuad&, Shader const&);
+    void execute(ShaderWorkItem&, Shader const&);
 
     ALWAYS_INLINE AK::SIMD::f32x4 get_register(u16 index) const { return m_registers[index]; }
     ALWAYS_INLINE void set_register(u16 index, AK::SIMD::f32x4 value) { m_registers[index] = value; }
 
 private:
-    void op_input(PixelQuad const&, Instruction::Arguments);
-    void op_output(PixelQuad&, Instruction::Arguments);
+    void op_input(ShaderWorkItem const&, Instruction::Arguments);
+    void op_output(ShaderWorkItem&, Instruction::Arguments);
     void op_sample2d(Instruction::Arguments);
     void op_swizzle(Instruction::Arguments);
     void op_add(Instruction::Arguments);

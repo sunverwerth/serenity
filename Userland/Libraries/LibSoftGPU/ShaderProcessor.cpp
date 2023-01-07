@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Stephan Unverwerth <s.unverwerth@serenityos.org>
+ * Copyright (c) 2022-2023, Stephan Unverwerth <s.unverwerth@serenityos.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -13,7 +13,7 @@ namespace SoftGPU {
 
 using AK::SIMD::f32x4;
 
-void ShaderProcessor::execute(PixelQuad& quad, Shader const& shader)
+void ShaderProcessor::execute(ShaderWorkItem& quad, Shader const& shader)
 {
     auto& instructions = shader.instructions();
     for (size_t program_counter = 0; program_counter < instructions.size(); ++program_counter) {
@@ -49,7 +49,7 @@ void ShaderProcessor::execute(PixelQuad& quad, Shader const& shader)
     }
 }
 
-void ShaderProcessor::op_input(PixelQuad const& quad, Instruction::Arguments arguments)
+void ShaderProcessor::op_input(ShaderWorkItem const& quad, Instruction::Arguments arguments)
 {
     set_register(arguments.input.target_register, quad.get_input_float(arguments.input.input_index));
     set_register(arguments.input.target_register + 1, quad.get_input_float(arguments.input.input_index + 1));
@@ -57,7 +57,7 @@ void ShaderProcessor::op_input(PixelQuad const& quad, Instruction::Arguments arg
     set_register(arguments.input.target_register + 3, quad.get_input_float(arguments.input.input_index + 3));
 }
 
-void ShaderProcessor::op_output(PixelQuad& quad, Instruction::Arguments arguments)
+void ShaderProcessor::op_output(ShaderWorkItem& quad, Instruction::Arguments arguments)
 {
     quad.set_output(arguments.output.output_index, get_register(arguments.output.source_register));
     quad.set_output(arguments.output.output_index + 1, get_register(arguments.output.source_register + 1));

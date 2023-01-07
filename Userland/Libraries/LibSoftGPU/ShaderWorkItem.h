@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Stephan Unverwerth <s.unverwerth@serenityos.org>
+ * Copyright (c) 2021-2023, Stephan Unverwerth <s.unverwerth@serenityos.org>
  * Copyright (c) 2022, Jelle Raaijmakers <jelle@gmta.nl>
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -20,7 +20,7 @@ using AK::SIMD::expand4;
 using AK::SIMD::f32x4;
 using AK::SIMD::i32x4;
 
-struct PixelQuad final {
+struct ShaderWorkItem final {
     void set_input(int index, f32x4 value) { inputs[index] = value; }
     f32x4 get_input_float(int index) const { return inputs[index]; }
 

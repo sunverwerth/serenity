@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Stephan Unverwerth <s.unverwerth@serenityos.org>
+ * Copyright (c) 2021-2023, Stephan Unverwerth <s.unverwerth@serenityos.org>
  * Copyright (c) 2022, Jelle Raaijmakers <jelle@gmta.nl>
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -41,7 +41,7 @@
 
 namespace SoftGPU {
 
-struct PixelQuad;
+struct ShaderWorkItem;
 
 class Device final : public GPU::Device {
 public:
@@ -104,7 +104,7 @@ private:
 
     void rasterize_triangle(Triangle&);
     void setup_blend_factors();
-    void shade_fragments(PixelQuad&);
+    void shade_fragments(ShaderWorkItem&);
 
     RefPtr<FrameBuffer<GPU::ColorType, GPU::DepthType, GPU::StencilType>> m_frame_buffer {};
     GPU::RasterizerOptions m_options;
