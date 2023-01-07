@@ -21,10 +21,10 @@
 #include <LibSoftGPU/Device.h>
 #include <LibSoftGPU/Image.h>
 #include <LibSoftGPU/PixelConverter.h>
-#include <LibSoftGPU/ShaderWorkItem.h>
 #include <LibSoftGPU/SIMD.h>
 #include <LibSoftGPU/Shader.h>
 #include <LibSoftGPU/ShaderCompiler.h>
+#include <LibSoftGPU/ShaderWorkItem.h>
 #include <math.h>
 
 namespace SoftGPU {
@@ -1692,6 +1692,11 @@ void Device::set_raster_position(GPU::RasterPosition const& raster_position)
 void Device::set_clip_planes(Vector<FloatVector4> const& clip_planes)
 {
     m_clip_planes = clip_planes;
+}
+
+void Device::set_input_assembly_config(GPU::InputAssemblyConfig const& config)
+{
+    m_input_assembly_config = config;
 }
 
 void Device::set_raster_position(FloatVector4 const& position, FloatMatrix4x4 const& model_view_transform, FloatMatrix4x4 const& projection_transform)

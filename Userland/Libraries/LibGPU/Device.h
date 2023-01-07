@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Stephan Unverwerth <s.unverwerth@serenityos.org>
+ * Copyright (c) 2022-2023, Stephan Unverwerth <s.unverwerth@serenityos.org>
  * Copyright (c) 2022, Jelle Raaijmakers <jelle@gmta.nl>
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -15,6 +15,7 @@
 #include <LibGPU/IR.h>
 #include <LibGPU/Image.h>
 #include <LibGPU/ImageDataLayout.h>
+#include <LibGPU/InputAssemblyConfig.h>
 #include <LibGPU/Light.h>
 #include <LibGPU/LightModelParameters.h>
 #include <LibGPU/Material.h>
@@ -67,6 +68,7 @@ public:
     virtual void set_stencil_configuration(Face, StencilConfiguration const&) = 0;
     virtual void set_texture_unit_configuration(TextureUnitIndex, TextureUnitConfiguration const&) = 0;
     virtual void set_clip_planes(Vector<FloatVector4> const&) = 0;
+    virtual void set_input_assembly_config(InputAssemblyConfig const&) = 0;
 
     virtual RasterPosition raster_position() const = 0;
     virtual void set_raster_position(RasterPosition const& raster_position) = 0;

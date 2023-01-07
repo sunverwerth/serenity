@@ -10,8 +10,8 @@
 #include <AK/SIMD.h>
 #include <AK/Vector.h>
 #include <LibGPU/Config.h>
-#include <LibSoftGPU/ShaderWorkItem.h>
 #include <LibSoftGPU/Sampler.h>
+#include <LibSoftGPU/ShaderWorkItem.h>
 
 namespace SoftGPU {
 

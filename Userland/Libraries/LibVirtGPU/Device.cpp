@@ -415,6 +415,11 @@ void Device::set_clip_planes(Vector<FloatVector4> const&)
     dbgln("VirtGPU::Device::set_clip_planes(): unimplemented");
 }
 
+void Device::set_input_assembly_config(GPU::InputAssemblyConfig const&)
+{
+    dbgln("VirtGPU::Device::set_input_assembly_config(): unimplemented");
+}
+
 GPU::RasterPosition Device::raster_position() const
 {
     dbgln("VirtGPU::Device::raster_position(): unimplemented");

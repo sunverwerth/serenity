@@ -76,6 +76,7 @@ public:
     virtual void set_stencil_configuration(GPU::Face, GPU::StencilConfiguration const&) override;
     virtual void set_texture_unit_configuration(GPU::TextureUnitIndex, GPU::TextureUnitConfiguration const&) override;
     virtual void set_clip_planes(Vector<FloatVector4> const&) override;
+    virtual void set_input_assembly_config(GPU::InputAssemblyConfig const&) override;
 
     virtual GPU::RasterPosition raster_position() const override { return m_raster_position; }
     virtual void set_raster_position(GPU::RasterPosition const& raster_position) override;
@@ -123,6 +124,7 @@ private:
     Array<GPU::TextureUnitConfiguration, GPU::NUM_TEXTURE_UNITS> m_texture_unit_configuration;
     RefPtr<Shader> m_current_fragment_shader;
     ShaderProcessor m_shader_processor;
+    GPU::InputAssemblyConfig m_input_assembly_config;
 };
 
 }
